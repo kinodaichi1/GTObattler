@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTO Battler</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ロード画面を追加 -->
+    <div id="loader">
+        <img src="GTO battler.png" alt="GTO Battler Logo Loading...">
+    </div>
+
+    <!-- ヘッダーのテキストロゴを画像ロゴに変更 -->
+    <header class="site-header">
+        <div class="site-logo">
+            <img src="GTO battler.png" alt="GTO Battler Logo">
+        </div>
+        <nav class="navigation">
+            <button class="nav-button active" data-target="range-finder">レンジ</button>
+            <button class="nav-button" data-target="tournament-timer">タイマー</button>
+            <button class="nav-button" data-target="odds-calculator">計算機</button>
+            <button class="nav-button" data-target="glossary">用語集</button>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <!-- レンジファインダー -->
+        <section id="range-finder" class="content-section active">
+            <h2>レンジファインダー</h2>
+            <div class="range-finder-container">
+                <div class="controls-panel">
+                    <div class="control-group">
+                        <label for="player-count">人数:</label>
+                        <select id="player-count">
+                            <option value="6max">6人 (6-Max)</option>
+                            <option value="hu">2人 (HU)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>ポジション:</label>
+                        <div id="position-buttons" class="position-buttons"></div>
+                    </div>
+                </div>
+                <div class="range-display-area">
+                    <div id="range-grid" class="range-grid"></div>
+                    <div class="range-legend">
+                        <div class="legend-item"><span class="legend-color raise"></span>Raise</div>
+                        <div class="legend-item"><span class="legend-color call"></span>Call</div>
+                        <div class="legend-item"><span class="legend-color three-bet"></span>3-Bet</div>
+                        <div class="legend-item"><span class="legend-color fold"></span>Fold</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- トーナメントタイマー -->
+        <section id="tournament-timer" class="content-section">
+            <h2>トーナメントタイマー</h2>
+            <div class="timer-container">
+                <div class="timer-display">
+                    <div class="level-display">
+                        <span>LEVEL</span>
+                        <span id="current-level">1</span>
+                    </div>
+                    <div id="time-left" class="time-display">15:00</div>
+                    <div class="blinds-display">
+                        <div class="current-blinds">
+                            <p>SB/BB</p>
+                            <p id="current-sb-bb">100 / 200</p>
+                        </div>
+                        <div class="next-blinds">
+                            <p>NEXT SB/BB</p>
+                            <p id="next-sb-bb">150 / 300</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="timer-controls">
+                    <button id="start-pause-btn">START</button>
+                    <button id="reset-btn">RESET</button>
+                </div>
+                <div class="blinds-structure">
+                    <h3>ブラインド構成</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Level</th>
+                                <th>Time (min)</th>
+                                <th>SB</th>
+                                <th>BB</th>
+                                <th>Ante</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blinds-tbody"></tbody>
+                    </table>
+                    <div class="blinds-controls">
+                        <button id="add-level-btn">レベルを追加</button>
+                        <button id="save-structure-btn">構成を保存</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- オッズ計算機 -->
+        <section id="odds-calculator" class="content-section">
+            <h2>オッズ計算機</h2>
+            <div class="calculator-container">
+                <div class="input-group">
+                    <label for="pot-total">現在のポットの総額</label>
+                    <input type="number" id="pot-total" placeholder="例: 1000">
+                </div>
+                <div class="input-group">
+                    <label for="call-amount">コールに必要な額</label>
+                    <input type="number" id="call-amount" placeholder="例: 200">
+                </div>
+                <button id="calculate-btn">計算する</button>
+                <div class="result-area">
+                    <h3>必要な勝率 (ポットオッズ)</h3>
+                    <p id="result-text">--.--%</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 用語集 -->
+        <section id="glossary" class="content-section">
+            <h2>ポーカー用語集</h2>
+            <div class="glossary-item">
+                <button class="glossary-term">3ベット (3-Bet)</button>
+                <div class="glossary-description">
+                    <p>プリフロップにおいて、最初のレイズに対してさらにレイズ（リレイズ）をすること。非常に強いハンドを持っているか、ブラフの意思表示として使われる。</p>
+                </div>
+            </div>
+            <div class="glossary-item">
+                <button class="glossary-term">コンティニュエーションベット (CB)</button>
+                <div class="glossary-description">
+                    <p>プリフロップでレイズしたプレイヤーが、フロップでも続けてベットすること。主導権を握り続けるための強力な戦術。</p>
+                </div>
+            </div>
+            <div class="glossary-item">
+                <button class="glossary-term">ポットオッズ</button>
+                <div class="glossary-description">
+                    <p>ポットの総額とコールするために必要な額の比率。この比率と自分の勝率を比較することで、コールが割に合う（期待値がプラスになる）かどうかを判断できる。</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- リセット確認用モーダルウィンドウ -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <p>本当にタイマーをリセットしますか？</p>
+            <div class="modal-actions">
+                <button id="modal-confirm-btn">リセットする</button>
+                <button id="modal-cancel-btn">キャンセル</button>
+            </div>
+        </div>
+    </div>
+    
+    <audio id="alarm-sound" src="Alarm.mp3" preload="auto"></audio>
+    <script src="script.js"></script>
+</body>
+</html>

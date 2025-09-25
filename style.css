@@ -1,0 +1,523 @@
+:root {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --primary-color: #2a2a2e;
+    --accent-color: #3a7ca5;
+    --text-color: #f0f0f0;
+    --header-height: 110px;  /*　ヘッダーは110がベスト */
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    padding-top: var(--header-height);
+}
+
+#loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.7s ease, visibility 0.7s ease;
+}
+
+#loader img {
+    width: 625px;
+    animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+#loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.site-header {
+    background-color: var(--surface-color);
+    padding: 0 30px;
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+}
+
+.site-logo {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    margin-left: -35px;
+}
+
+.site-logo img {
+    height: 180px;
+    width: auto;
+}
+
+.navigation {
+    margin-left: auto;
+}
+
+.nav-button {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--text-color);
+    font-size: 1em;
+    font-weight: bold;
+    padding: 10px 20px;
+    margin-left: 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.nav-button:hover {
+    background-color: var(--primary-color);
+}
+
+.nav-button.active {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    font-weight: bold;
+}
+
+.main-content {
+    padding: 20px;
+}
+
+.content-section {
+    display: none;
+    background-color: var(--surface-color);
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.content-section.active {
+    display: block;
+}
+
+/* ===== 用語集スタイル ===== */
+.glossary-item {
+    margin-bottom: 10px;
+}
+
+.glossary-term {
+    width: 100%;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: none;
+    padding: 15px 20px;
+    font-size: 1.1em;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.glossary-term:hover {
+    background-color: var(--accent-color);
+}
+
+.glossary-term::after {
+    content: '▼';
+    position: absolute;
+    right: 20px;
+    transition: transform 0.3s;
+}
+
+.glossary-term.active::after {
+    transform: rotate(180deg);
+}
+
+.glossary-description {
+    background-color: #2c2c3e;
+    padding: 0 20px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.glossary-description p {
+    margin: 0;
+    padding: 20px 0;
+}
+
+.glossary-description.active {
+    max-height: 200px;
+    padding: 0 20px;
+}
+
+/* ===== オッズ計算機スタイル ===== */
+.calculator-container {
+    max-width: 500px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    margin-bottom: 8px;
+    font-size: 1.1em;
+}
+
+.input-group input {
+    background-color: var(--bg-color);
+    border: 1px solid var(--primary-color);
+    color: var(--text-color);
+    padding: 12px;
+    border-radius: 5px;
+    font-size: 1.2em;
+}
+
+#calculate-btn {
+    background-color: var(--accent-color);
+    border: none;
+    color: #fff;
+    padding: 15px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+#calculate-btn:active {
+    transform: scale(0.98);
+}
+
+.result-area {
+    background-color: var(--bg-color);
+    padding: 20px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.result-area h3 {
+    margin: 0 0 10px 0;
+    color: var(--accent-color);
+}
+
+#result-text {
+    margin: 0;
+    font-size: 2.5em;
+    font-weight: bold;
+}
+
+/* ===== トーナメントタイマースタイル ===== */
+.timer-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+}
+
+.timer-display {
+    background-color: var(--bg-color);
+    width: 100%;
+    max-width: 600px;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.level-display {
+    font-size: 1.5em;
+    color: var(--accent-color);
+    margin-bottom: 10px;
+}
+#current-level {
+    font-weight: bold;
+}
+
+.time-display {
+    font-size: 7em;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 20px;
+}
+
+.blinds-display {
+    display: flex;
+    justify-content: space-around;
+    font-size: 1.2em;
+}
+.blinds-display p {
+    margin: 0;
+}
+.blinds-display p:first-child {
+    color: #aaa;
+    margin-bottom: 5px;
+}
+
+.timer-controls {
+    display: flex;
+    gap: 20px;
+}
+.timer-controls button {
+    padding: 15px 40px;
+    font-size: 1.5em;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+#start-pause-btn {
+    background-color: #28a745;
+    color: white;
+}
+#reset-btn {
+    background-color: #6c757d;
+    color: white;
+}
+
+.blinds-structure {
+    width: 100%;
+    max-width: 800px;
+}
+.blinds-structure h3 {
+    text-align: center;
+}
+.blinds-structure table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+.blinds-structure th, .blinds-structure td {
+    padding: 12px;
+    border: 1px solid var(--primary-color);
+    text-align: center;
+}
+.blinds-structure th {
+    background-color: var(--primary-color);
+}
+.blinds-structure td input {
+    width: 80%;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid #555;
+    padding: 5px;
+    text-align: center;
+}
+.blinds-structure tr.active-level {
+    background-color: #3a7ca555;
+}
+
+.blinds-controls {
+    text-align: center;
+}
+.blinds-controls button {
+    padding: 10px 20px;
+    font-size: 1em;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#start-pause-btn.paused {
+    background-color: #dc3545;
+}
+
+/* ===== モーダルウィンドウ（擬似ポップアップ）スタイル ===== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.visible {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    background-color: var(--surface-color);
+    padding: 30px 40px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+.modal-overlay.visible .modal-content {
+    transform: scale(1);
+}
+
+.modal-content p {
+    margin: 0 0 25px 0;
+    font-size: 1.2em;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.modal-actions button {
+    padding: 12px 30px;
+    font-size: 1em;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+.modal-actions button:active {
+    transform: scale(0.95);
+}
+
+#modal-confirm-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+#modal-cancel-btn {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* ===== レンジファインダースタイル ===== */
+.range-finder-container {
+    display: flex;
+    gap: 20px;
+}
+
+.controls-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.control-group label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+.control-group select {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: 1px solid #555;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+.position-buttons, .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pos-btn, .action-btn {
+    padding: 10px 15px;
+    border: 1px solid var(--primary-color);
+    background-color: transparent;
+    color: var(--text-color);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.pos-btn:hover, .action-btn:hover {
+    background-color: var(--primary-color);
+}
+.pos-btn.active, .action-btn.active {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    font-weight: bold;
+}
+
+.range-display-area {
+    flex: 2;
+}
+
+.range-grid {
+    display: grid;
+    grid-template-columns: repeat(13, 1fr);
+    grid-template-rows: repeat(13, 1fr);
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    border: 1px solid #555;
+}
+
+.grid-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9em;
+    font-weight: bold;
+    border: 1px solid #333;
+    background-color: var(--primary-color);
+    color: var(--text-color);
+}
+.cell-raise { background-color: #e53935; }
+.cell-call  { background-color: #43a047; }
+.cell-three-bet { background-color: #1e88e5; } /* 3-Bet用の新しい色 */
+.cell-fold  { background-color: #546e7a; }
+
+.range-legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+}
+.legend-color.raise { background-color: #e53935; }
+.legend-color.call  { background-color: #43a047; }
+.legend-color.three-bet { background-color: #1e88e5; } /* 3-Bet用の新しい色 */
+.legend-color.fold  { background-color: #546e7a; }
+
+@media (max-width: 768px) {
+    .range-finder-container {
+        flex-direction: column;
+    }
+    .grid-cell {
+        font-size: 2.5vw;
+    }
+}
