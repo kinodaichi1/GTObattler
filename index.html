@@ -1,237 +1,630 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GTO Battler</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <!-- ロード画面を追加 -->
     <div id="loader">
-        <img src="GTO battler.png" alt="GTO Battler Logo Loading...">
+      <img src="GTO battler.png" alt="GTO Battler Logo Loading..." />
     </div>
 
     <!-- ヘッダーのテキストロゴを画像ロゴに変更 -->
     <header class="site-header">
-        <div class="site-logo">
-            <img src="GTO battler.png" alt="GTO Battler Logo">
-        </div>
-        <nav class="navigation">
-            <button class="nav-button active" data-target="range-finder">レンジ</button>
-            <button class="nav-button" data-target="tournament-timer">タイマー</button>
-            <button class="nav-button" data-target="odds-calculator">計算機</button>
-            <button class="nav-button" data-target="glossary">用語集</button>
-        </nav>
+      <div class="site-logo">
+        <img src="GTO battler.png" alt="GTO Battler Logo" />
+      </div>
+      <nav class="navigation">
+        <button class="nav-button active" data-target="range-finder">
+          レンジ
+        </button>
+        <button class="nav-button" data-target="tournament-timer">
+          タイマー
+        </button>
+        <button class="nav-button" data-target="calculators">計算機</button>
+        <button class="nav-button" data-target="glossary">用語集</button>
+      </nav>
     </header>
 
     <main class="main-content">
-        <!-- レンジファインダー -->
-        <section id="range-finder" class="content-section active">
-            <h2>レンジファインダー</h2>
-            <div class="range-finder-container">
-                <div class="controls-panel">
-                    <div class="control-group">
-                        <label for="player-count">人数:</label>
-                        <select id="player-count">
-                            <option value="6max">6人 (6-Max)</option>
-                            <option value="hu">2人 (HU)</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label>ポジション:</label>
-                        <div id="position-buttons" class="position-buttons"></div>
-                    </div>
-                </div>
-                <div class="range-display-area">
-                    <div id="range-grid" class="range-grid"></div>
-                    <div class="range-legend">
-                        <div class="legend-item"><span class="legend-color raise"></span>Raise</div>
-                        <div class="legend-item"><span class="legend-color call"></span>Call</div>
-                        <div class="legend-item"><span class="legend-color three-bet"></span>3-Bet</div>
-                        <div class="legend-item"><span class="legend-color fold"></span>Fold</div>
-                    </div>
-                </div>
+      <!-- レンジファインダー -->
+      <section id="range-finder" class="content-section active">
+        <h2>レンジファインダー</h2>
+        <div class="range-finder-container">
+          <div class="controls-panel">
+            <div class="control-group">
+              <label for="player-count">人数:</label>
+              <select id="player-count">
+                <option value="6max">6人 (6-Max)</option>
+                <option value="hu">2人 (HU)</option>
+              </select>
             </div>
-        </section>
+            <div class="control-group">
+              <label>ポジション:</label>
+              <div id="position-buttons" class="position-buttons"></div>
+            </div>
+          </div>
+          <div class="range-display-area">
+            <div id="range-grid" class="range-grid"></div>
+            <div class="range-legend">
+              <div class="legend-item">
+                <span class="legend-color raise"></span>Raise
+              </div>
+              <div class="legend-item">
+                <span class="legend-color call"></span>Call
+              </div>
+              <div class="legend-item">
+                <span class="legend-color three-bet"></span>3-Bet
+              </div>
+              <div class="legend-item">
+                <span class="legend-color fold"></span>Fold
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        <!-- トーナメントタイマー -->
-        <section id="tournament-timer" class="content-section">
-            <h2>トーナメントタイマー</h2>
-            <div class="timer-container">
-                <div class="timer-display">
-                    <div class="level-display">
-                        <span>LEVEL</span>
-                        <span id="current-level">1</span>
-                    </div>
-                    <div id="time-left" class="time-display">15:00</div>
-                    <div class="blinds-display">
-                        <div class="current-blinds">
-                            <p>SB/BB</p>
-                            <p id="current-sb-bb">100 / 200</p>
-                        </div>
-                        <div class="next-blinds">
-                            <p>NEXT SB/BB</p>
-                            <p id="next-sb-bb">150 / 300</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="timer-controls">
-                    <button id="start-pause-btn">START</button>
-                    <button id="reset-btn">RESET</button>
-                </div>
-                <div class="blinds-structure">
-                    <h3>ブラインド構成</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Level</th>
-                                <th>Time (min)</th>
-                                <th>SB</th>
-                                <th>BB</th>
-                                <th>Ante</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="blinds-tbody"></tbody>
-                    </table>
-                    <div class="blinds-controls">
-                        <button id="add-level-btn">レベルを追加</button>
-                        <button id="save-structure-btn">構成を保存</button>
-                    </div>
-                </div>
+      <!-- トーナメントタイマー -->
+      <section id="tournament-timer" class="content-section">
+        <h2>トーナメントタイマー</h2>
+        <div class="timer-container">
+          <div class="timer-display">
+            <div class="progress-container">
+              <div id="timer-progress-bar"></div>
             </div>
-        </section>
+            <div class="level-display">
+              <span>LEVEL</span>
+              <span id="current-level">1</span>
+            </div>
+            <div id="time-left" class="time-display">15:00</div>
+            <div class="blinds-display">
+              <div class="current-blinds">
+                <p>SB/BB</p>
+                <p id="current-sb-bb">100 / 200</p>
+              </div>
+              <div class="next-blinds">
+                <p>NEXT SB/BB</p>
+                <p id="next-sb-bb">150 / 300</p>
+              </div>
+            </div>
+          </div>
+          <div class="timer-controls">
+            <button id="start-pause-btn">START</button>
+            <button id="reset-btn">RESET</button>
+          </div>
+          <div class="blinds-structure">
+            <h3>ブラインド構成</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Level</th>
+                  <th>Time (min)</th>
+                  <th>SB</th>
+                  <th>BB</th>
+                  <th>Ante</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="blinds-tbody"></tbody>
+            </table>
+            <div class="blinds-controls">
+              <button id="add-level-btn">レベルを追加</button>
+              <button id="save-structure-btn">構成を保存</button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        <!-- オッズ計算機 -->
-        <section id="odds-calculator" class="content-section">
-            <h2>オッズ計算機</h2>
-            <div class="calculator-container">
-                <div class="input-group">
-                    <label for="pot-total">現在のポットの総額</label>
-                    <input type="number" id="pot-total" placeholder="例: 1000">
-                </div>
-                <div class="input-group">
-                    <label for="call-amount">コールに必要な額</label>
-                    <input type="number" id="call-amount" placeholder="例: 200">
-                </div>
-                <button id="calculate-btn">計算する</button>
-                <div class="result-area">
-                    <h3>必要な勝率 (ポットオッズ)</h3>
-                    <p id="result-text">--.--%</p>
-                </div>
-            </div>
-        </section>
+      <!-- 計算機 -->
+      <section id="calculators" class="content-section">
+        <h2>計算機</h2>
+        <div class="calc-nav">
+          <button class="calc-nav-button active" data-calc="pot-odds">
+            ポットオッズ
+          </button>
+          <button class="calc-nav-button" data-calc="fold-equity">
+            フォールドエクイティ
+          </button>
+          <button class="calc-nav-button" data-calc="outs-to-equity">
+            アウツ→勝率
+          </button>
+        </div>
 
-        <!-- 用語集 -->
-        <section id="glossary" class="content-section">
-            <h2>ポーカー用語集</h2>
-            <div class="glossary-item">
-                <button class="glossary-term">3ベット (3-Bet)</button>
-                <div class="glossary-description">
-                    <p>プリフロップにおいて、最初のレイズに対してさらにレイズ（リレイズ）をすること。非常に強いハンドを持っているか、ブラフの意思表示として使われる。</p>
-                </div>
+        <!-- Pot Odds Calculator -->
+        <div id="pot-odds-calc" class="calculator-content active">
+          <h3>ポットオッズ計算機</h3>
+          <div class="calculator-container">
+            <div class="input-group">
+              <label for="pot-total">現在のポットの総額</label>
+              <input type="number" id="pot-total" placeholder="例: 1000" />
             </div>
-            <div class="glossary-item">
-                <button class="glossary-term">コンティニュエーションベット (CB)</button>
-                <div class="glossary-description">
-                    <p>プリフロップでレイズしたプレイヤーが、フロップでも続けてベットすること。主導権を握り続けるための強力な戦術。</p>
-                </div>
+            <div class="input-group">
+              <label for="call-amount">コールに必要な額</label>
+              <input type="number" id="call-amount" placeholder="例: 200" />
             </div>
-            <div class="glossary-item">
-                <button class="glossary-term">ポットオッズ</button>
-                <div class="glossary-description">
-                    <p>ポットの総額とコールするために必要な額の比率。この比率と自分の勝率を比較することで、コールが割に合う（期待値がプラスになる）かどうかを判断できる。</p>
-                </div>
+            <button id="calculate-btn">計算する</button>
+            <div class="result-area">
+              <h3>必要な勝率 (ポットオッズ)</h3>
+              <p id="result-text">--.--%</p>
             </div>
-            <div class="glossary-item">
-                <button class="glossary-term">エクイティ (Equity)</button>
-                <div class="glossary-description">
-                    <p>あるハンドがポットを獲得する確率的な期待値（分け前）。自分のハンドが相手のハンドレンジに対して持つ勝率を指します。</p>
-                </div>
+          </div>
+        </div>
+
+        <!-- Fold Equity Calculator -->
+        <div id="fold-equity-calc" class="calculator-content">
+          <h3>必要フォールドエクイティ計算機</h3>
+          <div class="calculator-container">
+            <div class="input-group">
+              <label for="fe-pot-size">ベット前のポット総額</label>
+              <input type="number" id="fe-pot-size" placeholder="例: 1000" />
             </div>
-            <div class="glossary-item">
-                <button class="glossary-term">フォールドエクイティ (Fold Equity)</button>
-                <div class="glossary-description">
-                    <p>自分のベットやレイズによって、相手がハンドをフォールドすることで得られる期待値。自分のハンドが弱くても、相手を降ろせばポットを獲得できます。</p>
-                </div>
+            <div class="input-group">
+              <label for="fe-bet-size">ベットする額</label>
+              <input type="number" id="fe-bet-size" placeholder="例: 500" />
             </div>
-            <div class="glossary-item">
-                <button class="glossary-term">ブロッカー (Blocker)</button>
-                <div class="glossary-description">
-                    <p>自分が特定のカードを持っていることで、相手がそのカードを含む強いハンド（コンボ）を持っている可能性を低くさせる効果。例えば、ナッツフラッシュのAを持っている場合、相手がナッツフラッシュである可能性をブロックできます。</p>
-                </div>
+            <button id="fe-calculate-btn">計算する</button>
+            <div class="result-area">
+              <h3>相手がフォールドすべき最低頻度</h3>
+              <p id="fe-result-text">--.--%</p>
             </div>
-            <div class="glossary-item">
-                <button class="glossary-term">GTO (ゲーム理論最適戦略)</button>
-                <div class="glossary-description">
-                    <p>ゲーム理論に基づいた、相手から搾取されることのない数学的に最適なプレイスタイル。相手がどんな戦略をとっても、長期的には損失を出さないことを目指します。</p>
-                </div>
+          </div>
+        </div>
+
+        <!-- Outs to Equity Calculator -->
+        <div id="outs-to-equity-calc" class="calculator-content">
+          <h3>アウツ→勝率 変換</h3>
+          <div class="calculator-container">
+            <div class="input-group">
+              <label for="outs-count">自分のアウツの数</label>
+              <input
+                type="number"
+                id="outs-count"
+                placeholder="例: 8 (フラッシュドロー)"
+              />
             </div>
-            <div class="glossary-item">
-                <button class="glossary-term">バリューベット (Value Bet)</button>
-                <div class="glossary-description">
-                    <p>自分が勝っている確率が高いハンドで、相手のより弱いハンドからコールをもらって利益を最大化するために打つベット。</p>
-                </div>
+            <button id="outs-calculate-btn">計算する</button>
+            <div class="result-area">
+              <h3>ドローを完成させる確率</h3>
+              <p>
+                次のカード (ターン or リバー):
+                <strong id="outs-result-next">--.--%</strong>
+              </p>
+              <p>
+                フロップからリバーまで (2枚):
+                <strong id="outs-result-both">--.--%</strong>
+              </p>
             </div>
-            <div class="glossary-item">
-                <button class="glossary-term">ブラフキャッチャー (Bluff Catcher)</button>
-                <div class="glossary-description">
-                    <p>絶対的なハンドの強さは高くないが、相手がブラフしている場合にのみ勝てるハンドのこと。また、そのハンドで相手のベットにコールすること。</p>
-                </div>
-            </div>
-            <div class="glossary-item">
-                <button class="glossary-term">シン・バリューベット (Thin Value Bet)</button>
-                <div class="glossary-description">
-                    <p>相手のコールしてくるハンドレンジに対して、ごくわずかに勝っている（優位性がある）と判断した際に、薄いバリューを狙って打つベット。</p>
-                </div>
-            </div>
-            <div class="glossary-item">
-                <button class="glossary-term">リバース・インプライド・オッズ (Reverse Implied Odds)</button>
-                <div class="glossary-description">
-                    <p>ドローを完成させても、相手のより強いハンドに負けてしまい、結果的に大きな損失を被る危険性のこと。ポットオッズが良くてもコールが不利益になる場合がある。</p>
-                </div>
-            </div>
-            <div class="glossary-item">
-                <button class="glossary-term">ドンクベット (Donk Bet)</button>
-                <div class="glossary-description">
-                    <p>プリフロップのレイザー（アグレッサー）に対して、アウトオブポジションのプレイヤーが先にベットすること。通常はチェックで返すのがセオリーのため、奇襲的なベットと見なされることが多い。</p>
-                </div>
-            </div>
-            <div class="glossary-item">
-                <button class="glossary-term">フローティング (Floating)</button>
-                <div class="glossary-description">
-                    <p>ポジションがある状態で、相手のCB（コンティニュエーションベット）に対してコールし、後のストリートで相手が諦めた隙にポットを奪い取ることを狙うプレイ。</p>
-                </div>
-            </div>
-            <div class="glossary-item">
-                <button class="glossary-term">ポーラライズド・レンジ (Polarized Range)</button>
-                <div class="glossary-description">
-                    <p>ベットやレイズをする際のハンドレンジが、非常に強いハンド（ナッツ級）と完全なブラフの両極端に分かれている状態。</p>
-                </div>
-            </div>
-            <div class="glossary-item">
-                <button class="glossary-term">マージ・レンジ (Merged Range)</button>
-                <div class="glossary-description">
-                    <p>ベットやレイズをする際のハンドレンジに、強いハンド、中程度の強さのハンド、そしてブラフが混ざっている状態。ポーラライズド・レンジの対義語。</p>
-                </div>
-            </div>
-        </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- 用語集 -->
+      <section id="glossary" class="content-section">
+        <h2>ポーカー用語集</h2>
+
+        <div class="glossary-item">
+          <button class="glossary-term">プリフロップ (Pre-flop)</button>
+          <div class="glossary-description">
+            <p>
+              フロップのカード3枚が配られる前のベッティングラウンドのこと。ビッグブラインドの左隣のプレイヤーからアクションが始まる。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">フロップ (Flop)</button>
+          <div class="glossary-description">
+            <p>
+              最初にボードに開かれる3枚の共通カードのこと。フロップが開かれた後、2回目のベッティングラウンドが行われる。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">ターン (Turn)</button>
+          <div class="glossary-description">
+            <p>
+              ボードに開かれる4枚目の共通カードのこと。「フォース・ストリート」とも呼ばれる。ターンの後、3回目のベッティングラウンドが行われる。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">リバー (River)</button>
+          <div class="glossary-description">
+            <p>
+              ボードに開かれる5枚目の最後の共通カードのこと。「フィフス・ストリート」とも呼ばれる。リバーの後、最終ベッティングラウンドが行われる。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">ポストフロップ (Post-flop)</button>
+          <div class="glossary-description">
+            <p>
+              フロップ以降（フロップ、ターン、リバー）のアクションやベッティングラウンドの総称。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            オリジナルレイザー (Original Raiser)
+          </button>
+          <div class="glossary-description">
+            <p>
+              プリフロップで最初にレイズを行ったプレイヤーのこと。一般的に、そのラウンドにおける主導権を握ったと見なされる。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">コーラー (Caller)</button>
+          <div class="glossary-description">
+            <p>
+              レイズやフォールドを選択せず、相手のベットやレイズに対してコールを選択したプレイヤー。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">アグレッサー (Aggressor)</button>
+          <div class="glossary-description">
+            <p>
+              あるベッティングラウンドで、最後にベットまたはレイズを行ったプレイヤー。アクションを積極的に仕掛けている状態を示す。
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">ベット (Bet)</button>
+          <div class="glossary-description">
+            <p>そのラウンドで最初にチップを賭けるアクション。</p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">レイズ (Raise)</button>
+          <div class="glossary-description">
+            <p>
+              すでに行われたベットに対し、さらに金額を上乗せするアクション。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">オールイン (All-in)</button>
+          <div class="glossary-description">
+            <p>手持ちのチップをすべて賭けるアクション。</p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">オープンレイズ (Open Raise)</button>
+          <div class="glossary-description">
+            <p>
+              プリフロップ（最初のカードが配られた段階）で、誰も参加していない状況から最初にレイズで参加すること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">3ベット (3-Bet)</button>
+          <div class="glossary-description">
+            <p>
+              誰かのオープンレイズに対して、さらにレイズ（リレイズ）をすること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">4ベット (4-Bet)</button>
+          <div class="glossary-description">
+            <p>3ベットに対して、さらにレイズを重ねること。</p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">スクイーズ (Squeeze)</button>
+          <div class="glossary-description">
+            <p>
+              レイザーと、そのレイズにコールしたプレイヤーが複数いる状況で、後からさらにレイズをすること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            コンティニュエーションベット (Continuation Bet / C-Bet)
+          </button>
+          <div class="glossary-description">
+            <p>
+              プリフロップで最後にレイズしたプレイヤーが、フロップでも続けてベットすること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            ディレイドCベット (Delayed C-Bet)
+          </button>
+          <div class="glossary-description">
+            <p>
+              アグレッサーが、フロップではチェックし、次のターンでベットすること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">ドンクベット (Donk Bet)</button>
+          <div class="glossary-description">
+            <p>
+              プリフロップでレイズしたプレイヤー（アグレッサー）よりも先にアクションする立場のプレイヤーが、フロップでいきなりベットすること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">プローブベット (Probe Bet)</button>
+          <div class="glossary-description">
+            <p>
+              プリフロップのアグレッサーがフロップでCベットをせずチェックした場合に、次のターンで先にアクションするプレイヤーがベットすること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">バリューベット (Value Bet)</button>
+          <div class="glossary-description">
+            <p>
+              自分が勝っている可能性が高いと考え、相手のコールから利益を得るために行うベット。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            シン・バリューベット (Thin Value Bet)
+          </button>
+          <div class="glossary-description">
+            <p>
+              勝っているか微妙なハンドで、それでもわずかな優位があると考えて打つ小さなバリューベット。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">マージナルベット (Marginal Bet)</button>
+          <div class="glossary-description">
+            <p>
+              勝っているか負けているか微妙なハンド（マージナルハンド）で行うベット。自分より少しだけ弱いハンドから価値を引き出すこと（シン・バリュー）や、相手のドローを牽制することが主な目的。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            プロテクションベット (Protection Bet)
+          </button>
+          <div class="glossary-description">
+            <p>
+              現在勝っているが、逆転される可能性のあるハンドで行うベット。相手のドローハンドなどに対し、安く次のカードを見せることを防ぎ、自分のハンドの勝率を守る（プロテクトする）ことを目的とする。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">ブラフベット (Bluff Bet)</button>
+          <div class="glossary-description">
+            <p>
+              自分のハンドが弱く、相手を降ろすことだけを目的として行うベット。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">セミブラフ (Semi-Bluff)</button>
+          <div class="glossary-description">
+            <p>
+              現状は弱いが、今後強い役に発展する可能性のあるハンド（ドローハンド）で行うベット。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">ポットベット (Pot Bet)</button>
+          <div class="glossary-description">
+            <p>現在のポットにあるチップ総額と同額をベットすること。</p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">オーバーベット (Overbet)</button>
+          <div class="glossary-description">
+            <p>現在のポットにあるチップ総額よりも大きな額をベットすること。</p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            ブロッキングベット (Blocking Bet)
+          </button>
+          <div class="glossary-description">
+            <p>
+              相手からのより大きなベットを防ぐ目的で、自分から比較的小さな額をベットすること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            ボードテクスチャ (Board Texture)
+          </button>
+          <div class="glossary-description">
+            <p>
+              フロップ、ターン、リバーで開かれるコミュニティカード（ボード）の構成や性質のこと。カードの繋がり、絵柄、数字の高さなどから判断され、その後の戦略を立てる上で非常に重要な要素となる。
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">ウェットなボード (Wet Board)</button>
+          <div class="glossary-description">
+            <p>
+              ストレートやフラッシュが完成する可能性（ドロー）が多く存在するボードのこと。アクションが激しくなりやすく、非常に危険な状況を示唆する。例:
+              J♥ T♥ 9♠
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">ドライなボード (Dry Board)</button>
+          <div class="glossary-description">
+            <p>
+              ストレートやフラッシュの可能性がほとんどない、繋がりが薄いボードのこと。役が完成している可能性が低いため、比較的アクションが穏やかになりやすい。例:
+              K♠ 7♦ 2♣
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">
+            コネクトボード (Connected Board)
+          </button>
+          <div class="glossary-description">
+            <p>
+              カードの数字（ランク）が連続しており、ストレートが完成しやすいボードのこと。例:
+              8♠ 7♥ 6♠
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">レインボー (Rainbow)</button>
+          <div class="glossary-description">
+            <p>
+              フロップの3枚のカードの絵柄（スート）が全てバラバラの状態。現時点でフラッシュドローが存在しない、比較的安全なボードテクスチャ。
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">ツートーン (Two-tone)</button>
+          <div class="glossary-description">
+            <p>
+              フロップの3枚のうち、2枚のカードが同じ絵柄（スート）である状態。フラッシュドローが存在するため、ウェットな要素を持つ。
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">モノトーン (Monotone)</button>
+          <div class="glossary-description">
+            <p>
+              フロップの3枚全てが同じ絵柄（スート）である状態。すでにフラッシュが完成している可能性があり、非常に危険なボード。
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">ペアボード (Paired Board)</button>
+          <div class="glossary-description">
+            <p>
+              ボードに同じ数字のカードが2枚（ペア）が出ている状態。フルハウスやスリーカードが完成している可能性を考慮する必要がある。例:
+              K♠ K♥ 5♣
+            </p>
+          </div>
+        </div>
+
+        <div class="glossary-item">
+          <button class="glossary-term">
+            ダイナミック / スタティック (Dynamic / Static)
+          </button>
+          <div class="glossary-description">
+            <p>
+              ダイナミックは、ターンやリバーのカード1枚でハンドの強弱が大きく変わりやすいボード（ウェットボードなど）を指す。スタティックはその逆で、ハンドの強さが変わりにくいボード（ドライボードなど）を指す。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">ポットオッズ</button>
+          <div class="glossary-description">
+            <p>
+              ポットの総額とコールするために必要な額の比率。この比率と自分の勝率を比較することで、コールが割に合う（期待値がプラスになる）かどうかを判断できる。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">エクイティ (Equity)</button>
+          <div class="glossary-description">
+            <p>
+              あるハンドがポットを獲得する確率的な期待値（分け前）。自分のハンドが相手のハンドレンジに対して持つ勝率を指します。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            フォールドエクイティ (Fold Equity)
+          </button>
+          <div class="glossary-description">
+            <p>
+              自分のベットやレイズによって、相手がハンドをフォールドすることで得られる期待値。自分のハンドが弱くても、相手を降ろせばポットを獲得できます。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">ブロッカー (Blocker)</button>
+          <div class="glossary-description">
+            <p>
+              自分が特定のカードを持っていることで、相手がそのカードを含む強いハンド（コンボ）を持っている可能性を低くさせる効果。例えば、ナッツフラッシュのAを持っている場合、相手がナッツフラッシュである可能性をブロックできます。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">GTO (ゲーム理論最適戦略)</button>
+          <div class="glossary-description">
+            <p>
+              ゲーム理論に基づいた、相手から搾取されることのない数学的に最適なプレイスタイル。相手がどんな戦略をとっても、長期的には損失を出さないことを目指します。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            ブラフキャッチャー (Bluff Catcher)
+          </button>
+          <div class="glossary-description">
+            <p>
+              絶対的なハンドの強さは高くないが、相手がブラフしている場合にのみ勝てるハンドのこと。また、そのハンドで相手のベットにコールすること。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            リバース・インプライド・オッズ (Reverse Implied Odds)
+          </button>
+          <div class="glossary-description">
+            <p>
+              ドローを完成させても、相手のより強いハンドに負けてしまい、結果的に大きな損失を被る危険性のこと。ポットオッズが良くてもコールが不利益になる場合がある。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">フローティング (Floating)</button>
+          <div class="glossary-description">
+            <p>
+              ポジションがある状態で、相手のCB（コンティニュエーションベット）に対してコールし、後のストリートで相手が諦めた隙にポットを奪い取ることを狙うプレイ。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">
+            ポーラライズド・レンジ (Polarized Range)
+          </button>
+          <div class="glossary-description">
+            <p>
+              ベットやレイズをする際のハンドレンジが、非常に強いハンド（ナッツ級）と完全なブラフの両極端に分かれている状態。
+            </p>
+          </div>
+        </div>
+        <div class="glossary-item">
+          <button class="glossary-term">マージ・レンジ (Merged Range)</button>
+          <div class="glossary-description">
+            <p>
+              ベットやレイズをする際のハンドレンジに、強いハンド、中程度の強さのハンド、そしてブラフが混ざっている状態。ポーラライズド・レンジの対義語。
+            </p>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- リセット確認用モーダルウィンドウ -->
     <div id="confirm-modal" class="modal-overlay">
-        <div class="modal-content">
-            <p>本当にタイマーをリセットしますか？</p>
-            <div class="modal-actions">
-                <button id="modal-confirm-btn">リセットする</button>
-                <button id="modal-cancel-btn">キャンセル</button>
-            </div>
+      <div class="modal-content">
+        <p>本当にタイマーをリセットしますか？</p>
+        <div class="modal-actions">
+          <button id="modal-confirm-btn">リセットする</button>
+          <button id="modal-cancel-btn">キャンセル</button>
         </div>
+      </div>
     </div>
-    
+
     <audio id="alarm-sound" src="Alarm.mp3" preload="auto"></audio>
     <script src="script.js"></script>
-</body>
+  </body>
 </html>

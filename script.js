@@ -30,21 +30,86 @@ glossaryTerms.forEach(term => {
     });
 });
 
-// ===== オッズ計算機機能 =====
-const potTotalInput = document.getElementById('pot-total');
-const callAmountInput = document.getElementById('call-amount');
-const calculateBtn = document.getElementById('calculate-btn');
-const resultText = document.getElementById('result-text');
-calculateBtn.addEventListener('click', () => {
-    const potTotal = parseFloat(potTotalInput.value);
-    const callAmount = parseFloat(callAmountInput.value);
-    if (isNaN(potTotal) || isNaN(callAmount) || potTotal < 0 || callAmount <= 0) {
-        resultText.textContent = "有効な数値を入力してください";
-        return;
+// ===== 計算機セクション機能 =====
+(() => {
+    // サブナビゲーション
+    const calcNavButtons = document.querySelectorAll('.calc-nav-button');
+    const calcContents = document.querySelectorAll('.calculator-content');
+
+    calcNavButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetId = button.dataset.calc + '-calc';
+            
+            calcNavButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            calcContents.forEach(content => {
+                content.classList.toggle('active', content.id === targetId);
+            });
+        });
+    });
+
+    // ポットオッズ計算機
+    const potTotalInput = document.getElementById('pot-total');
+    const callAmountInput = document.getElementById('call-amount');
+    const calculateBtn = document.getElementById('calculate-btn');
+    const resultText = document.getElementById('result-text');
+
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', () => {
+            const potTotal = parseFloat(potTotalInput.value);
+            const callAmount = parseFloat(callAmountInput.value);
+            if (isNaN(potTotal) || isNaN(callAmount) || potTotal < 0 || callAmount <= 0) {
+                resultText.textContent = "有効な数値を入力してください";
+                return;
+            }
+            const odds = (callAmount / (potTotal + callAmount)) * 100;
+            resultText.textContent = `${odds.toFixed(2)}%`;
+        });
     }
-    const odds = (callAmount / (potTotal + callAmount)) * 100;
-    resultText.textContent = `${odds.toFixed(2)}%`;
-});
+
+    // フォールドエクイティ計算機
+    const fePotInput = document.getElementById('fe-pot-size');
+    const feBetInput = document.getElementById('fe-bet-size');
+    const feCalculateBtn = document.getElementById('fe-calculate-btn');
+    const feResultText = document.getElementById('fe-result-text');
+
+    if (feCalculateBtn) {
+        feCalculateBtn.addEventListener('click', () => {
+            const potSize = parseFloat(fePotInput.value);
+            const betSize = parseFloat(feBetInput.value);
+            if (isNaN(potSize) || isNaN(betSize) || potSize < 0 || betSize <= 0) {
+                feResultText.textContent = "有効な数値を入力してください";
+                return;
+            }
+            const requiredFE = (betSize / (potSize + betSize)) * 100;
+            feResultText.textContent = `${requiredFE.toFixed(2)}%`;
+        });
+    }
+
+    // アウツ→勝率 計算機
+    const outsInput = document.getElementById('outs-count');
+    const outsCalculateBtn = document.getElementById('outs-calculate-btn');
+    const outsResultNext = document.getElementById('outs-result-next');
+    const outsResultBoth = document.getElementById('outs-result-both');
+
+    if (outsCalculateBtn) {
+        outsCalculateBtn.addEventListener('click', () => {
+            const outs = parseInt(outsInput.value, 10);
+            if (isNaN(outs) || outs < 1 || outs > 47) {
+                if(outsResultNext) outsResultNext.textContent = "--.--%";
+                if(outsResultBoth) outsResultBoth.textContent = "--.--%";
+                alert("アウツは1〜47の有効な数値を入力してください。");
+                return;
+            }
+            const turnHit = (outs / 47) * 100;
+            const bothHit = (1 - (((47 - outs) / 47) * ((46 - outs) / 46))) * 100;
+
+            if(outsResultNext) outsResultNext.textContent = `${turnHit.toFixed(2)}%`;
+            if(outsResultBoth) outsResultBoth.textContent = `${bothHit.toFixed(2)}%`;
+        });
+    }
+})();
 
 // ===== トーナメントタイマー機能 (完全版) =====
 (() => {
@@ -97,9 +162,14 @@ calculateBtn.addEventListener('click', () => {
         nextSbBbDisplay.textContent = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb} Ante: ${nextLevel.ante}` : 'Final Level';
 
         const totalTimeForLevel = blindsStructure[currentLevelIndex].time * 60;
-        if (totalTimeForLevel > 0) {
-            const progressPercentage = (timeLeft / totalTimeForLevel) * 100;
-            timeLeftDisplay.parentElement.style.setProperty('--progress', `${progressPercentage}%`);
+        const progressBar = document.getElementById('timer-progress-bar');
+        if (progressBar) {
+            if (totalTimeForLevel > 0) {
+                const progressPercentage = (timeLeft / totalTimeForLevel) * 100;
+                progressBar.style.width = `${progressPercentage}%`;
+            } else {
+                progressBar.style.width = '100%';
+            }
         }
     }
 
