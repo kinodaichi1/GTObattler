@@ -80,6 +80,7 @@ calculateBtn.addEventListener('click', () => {
                 <td><input type="number" value="${level.sb}" data-index="${index}" data-key="sb"></td>
                 <td><input type="number" value="${level.bb}" data-index="${index}" data-key="bb"></td>
                 <td><input type="number" value="${level.ante}" data-index="${index}" data-key="ante"></td>
+                <td><button class="delete-level-btn" data-index="${index}">削除</button></td>
             `;
             blindsTbody.appendChild(row);
         });
@@ -94,6 +95,12 @@ calculateBtn.addEventListener('click', () => {
         currentLevelDisplay.textContent = currentLevelIndex + 1;
         currentSbBbDisplay.textContent = `${currentLevel.sb} / ${currentLevel.bb} Ante: ${currentLevel.ante}`;
         nextSbBbDisplay.textContent = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb} Ante: ${nextLevel.ante}` : 'Final Level';
+
+        const totalTimeForLevel = blindsStructure[currentLevelIndex].time * 60;
+        if (totalTimeForLevel > 0) {
+            const progressPercentage = (timeLeft / totalTimeForLevel) * 100;
+            timeLeftDisplay.parentElement.style.setProperty('--progress', `${progressPercentage}%`);
+        }
     }
 
     function levelUp() {
@@ -162,6 +169,18 @@ calculateBtn.addEventListener('click', () => {
         });
         executeReset();
         alert('ブラインド構成を保存し、タイマーをリセットしました。');
+    });
+
+    blindsTbody.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-level-btn')) {
+            const index = parseInt(e.target.dataset.index, 10);
+            if (blindsStructure.length > 1) {
+                blindsStructure.splice(index, 1);
+                executeReset();
+            } else {
+                alert('最後のレベルは削除できません。');
+            }
+        }
     });
 
     function initializeTimer() {

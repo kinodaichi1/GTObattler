@@ -242,6 +242,19 @@ body {
     border-radius: 10px;
     text-align: center;
     box-sizing: border-box;
+    position: relative; /* Add this */
+}
+
+/* Add this new rule */
+.timer-display::before {
+    content: '';
+    position: absolute;
+    top: -4px; left: -4px;
+    width: calc(100% + 8px);
+    height: calc(100% + 8px);
+    border-radius: 14px; /* parent is 10px, so 10+4 */
+    background: conic-gradient(var(--accent-color) 0%, var(--accent-color) var(--progress, 100%), #444 var(--progress, 100%), #444 100%);
+    z-index: -1;
 }
 
 .level-display {
@@ -337,6 +350,22 @@ body {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+}
+
+.delete-level-btn {
+    padding: 5px 10px;
+    font-size: 0.9em;
+    background-color: #6c757d; /* Gray color */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.delete-level-btn:hover {
+    background-color: #dc3545; /* Red color on hover */
 }
 
 #start-pause-btn.paused {
@@ -514,6 +543,37 @@ body {
 .legend-color.fold  { background-color: #546e7a; }
 
 @media (max-width: 768px) {
+    /* Header and Logo adjustments */
+    .site-header {
+        padding: 0 10px; /* Reduce padding */
+        justify-content: space-between;
+    }
+    .site-logo img {
+        height: 120px; /* Reduce logo size */
+    }
+    .site-logo {
+        margin-left: -20px; /* Adjust margin */
+    }
+
+    /* Navigation adjustments */
+    .navigation {
+        display: flex;
+        overflow-x: auto; /* Enable horizontal scrolling */
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        scrollbar-width: none; /* Hide scrollbar for Firefox */
+        margin-left: 0;
+    }
+    .navigation::-webkit-scrollbar {
+        display: none; /* Hide scrollbar for Chrome, Safari, and Opera */
+    }
+    .nav-button {
+        flex-shrink: 0; /* Prevent buttons from shrinking */
+        font-size: 0.9em;
+        padding: 8px 15px;
+        margin-left: 10px;
+    }
+
+    /* Existing styles */
     .range-finder-container {
         flex-direction: column;
     }
