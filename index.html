@@ -9,13 +9,13 @@
   <body>
     <!-- ロード画面を追加 -->
     <div id="loader">
-      <img src="GTO battler.png" alt="GTO Battler Logo Loading..." />
+      <img src="image/GTO battler.png" />
     </div>
 
     <!-- ヘッダーのテキストロゴを画像ロゴに変更 -->
     <header class="site-header">
       <div class="site-logo">
-        <img src="GTO battler.png" alt="GTO Battler Logo" />
+        <img src="image/GTO battler.png" alt="GTO Battler Logo" />
       </div>
       <nav class="navigation">
         <button class="nav-button active" data-target="range-finder">
@@ -26,9 +26,14 @@
         </button>
         <button class="nav-button" data-target="calculators">計算機</button>
         <button class="nav-button" data-target="glossary">用語集</button>
+        <button class="nav-button" data-target="gto-trainer">
+          GTOトレーナー
+        </button>
+        <button class="nav-button" data-target="texas-holdem">
+          テキサスホールデム
+        </button>
       </nav>
     </header>
-
     <main class="main-content">
       <!-- レンジファインダー -->
       <section id="range-finder" class="content-section active">
@@ -611,8 +616,66 @@
           </div>
         </div>
       </section>
-    </main>
 
+      <!-- GTO Trainer -->
+      <section id="gto-trainer" class="content-section">
+        <h2>GTO トレーナー</h2>
+        <div class="trainer-container">
+          <div class="trainer-header">
+            <div class="trainer-score">
+              スコア: <span id="trainer-score">0</span> /
+              <span id="trainer-attempts">0</span>
+            </div>
+            <select id="question-type-select">
+              <option value="all">すべての問題</option>
+              <option value="terminology">用語クイズ</option>
+              <option value="preflop">プリフロップ判断</option>
+              <option value="situational">シチュエーション判断</option>
+            </select>
+          </div>
+          <div id="question-area" class="question-area">
+            <p id="question-text" class="question-text">
+              下のドロップダウンから問題の種類を選択し、「開始」ボタンを押してください。
+            </p>
+          </div>
+          <div id="answer-options" class="answer-options">
+            <!-- Answer buttons are dynamically generated here -->
+          </div>
+          <div id="feedback-area" class="feedback-area">
+            <p id="feedback-text"></p>
+            <p id="explanation-text"></p>
+          </div>
+          <button id="start-trainer-btn" class="trainer-button">開始</button>
+        </div>
+      </section>
+      <!-- テキサスホールデム -->
+      <section id="texas-holdem" class="content-section">
+        <div id="setup-screen">
+          <!-- ゲーム設定はJSで動的に生成 -->
+        </div>
+        <div id="game-screen" style="display: none">
+          <div class="game-board">
+            <div id="players-wrapper">
+              <!-- プレイヤーエリアはJSで動的に生成 -->
+            </div>
+            <div class="center-area">
+              <div id="pot-display">
+                <h3>Pot: <span id="pot-total-value">0</span></h3>
+                <p id="pot-details"></p>
+              </div>
+              <div id="community-cards-area">
+                <!-- コミュニティカードはJSで動的に生成 -->
+              </div>
+            </div>
+          </div>
+          <div id="showdown-results-area" style="display: none">
+            <!-- ショーダウン結果はJSで動的に生成 -->
+          </div>
+          <div id="custom-alert"></div>
+          <button class="btn-reset-game">ゲームをリセット</button>
+        </div>
+      </section>
+    </main>
     <!-- リセット確認用モーダルウィンドウ -->
     <div id="confirm-modal" class="modal-overlay">
       <div class="modal-content">
@@ -624,7 +687,7 @@
       </div>
     </div>
 
-    <audio id="alarm-sound" src="Alarm.mp3" preload="auto"></audio>
+    <audio id="alarm-sound" src="audio/Alarm.mp3" preload="auto"></audio>
     <script src="script.js"></script>
   </body>
 </html>

@@ -1,7 +1,7 @@
 # GTO Battler
 
 <p align="center">
-  <img src="GTO battler.png" alt="GTO Battler Logo" width="300"/>
+  <img src="image/GTO battler.png" alt="GTO Battler Logo" width="300"/>
 </p>
 
 <p align="center">
