@@ -4,7 +4,7 @@
   --primary-color: #2a2a2e;
   --accent-color: #3a7ca5;
   --text-color: #f0f0f0;
-  --header-height: 110px; /*　ヘッダーは110がベスト */
+  --header-height: 110px;
 }
 
 body {
@@ -62,6 +62,7 @@ body {
   width: 100%;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
+  z-index: 1000;
 }
 
 .site-logo {
@@ -79,7 +80,6 @@ body {
 .navigation {
   margin-left: auto;
 }
-
 .nav-button {
   background-color: transparent;
   border: 1px solid var(--primary-color);
@@ -92,11 +92,9 @@ body {
   cursor: pointer;
   transition: background-color 0.2s;
 }
-
 .nav-button:hover {
   background-color: var(--primary-color);
 }
-
 .nav-button.active {
   background-color: var(--accent-color);
   border-color: var(--accent-color);
@@ -106,23 +104,24 @@ body {
 .main-content {
   padding: 20px;
 }
-
 .content-section {
   display: none;
   background-color: var(--surface-color);
   padding: 20px;
   border-radius: 8px;
 }
-
 .content-section.active {
   display: block;
+}
+h2 {
+  text-align: center;
+  color: var(--accent-color);
 }
 
 /* ===== 用語集スタイル ===== */
 .glossary-item {
   margin-bottom: 10px;
 }
-
 .glossary-term {
   width: 100%;
   background-color: var(--primary-color);
@@ -136,22 +135,18 @@ body {
   transition: background-color 0.2s;
   position: relative;
 }
-
 .glossary-term:hover {
   background-color: var(--accent-color);
 }
-
 .glossary-term::after {
   content: "▼";
   position: absolute;
   right: 20px;
   transition: transform 0.3s;
 }
-
 .glossary-term.active::after {
   transform: rotate(180deg);
 }
-
 .glossary-description {
   background-color: #2c2c3e;
   padding: 0 20px;
@@ -159,12 +154,10 @@ body {
   overflow: hidden;
   transition: max-height 0.3s ease-out, padding 0.3s ease-out;
 }
-
 .glossary-description p {
   margin: 0;
   padding: 20px 0;
 }
-
 .glossary-description.active {
   max-height: 200px;
   padding: 0 20px;
@@ -177,7 +170,6 @@ body {
   gap: 10px;
   margin-bottom: 20px;
 }
-
 .calc-nav-button {
   padding: 10px 20px;
   font-size: 1em;
@@ -188,31 +180,25 @@ body {
   cursor: pointer;
   transition: background-color 0.2s;
 }
-
 .calc-nav-button:hover {
   background-color: #3a3a4a;
 }
-
 .calc-nav-button.active {
   background-color: var(--accent-color);
   border-color: var(--accent-color);
   font-weight: bold;
 }
-
 .calculator-content {
   display: none;
 }
-
 .calculator-content.active {
   display: block;
 }
-
 .calculator-content h3 {
   text-align: center;
   color: var(--accent-color);
   margin-bottom: 20px;
 }
-
 .result-area p {
   font-size: 1.2em;
   line-height: 1.6;
@@ -230,17 +216,14 @@ body {
   flex-direction: column;
   gap: 20px;
 }
-
 .input-group {
   display: flex;
   flex-direction: column;
 }
-
 .input-group label {
   margin-bottom: 8px;
   font-size: 1.1em;
 }
-
 .input-group input {
   background-color: var(--bg-color);
   border: 1px solid var(--primary-color);
@@ -249,7 +232,6 @@ body {
   border-radius: 5px;
   font-size: 1.2em;
 }
-
 #calculate-btn,
 #fe-calculate-btn,
 #outs-calculate-btn {
@@ -263,26 +245,23 @@ body {
   cursor: pointer;
   transition: transform 0.1s;
 }
-
 #calculate-btn:active,
 #fe-calculate-btn:active,
 #outs-calculate-btn:active {
   transform: scale(0.98);
 }
-
 .result-area {
   background-color: var(--bg-color);
   padding: 20px;
   border-radius: 5px;
   text-align: center;
 }
-
 .result-area h3 {
   margin: 0 0 10px 0;
   color: var(--accent-color);
 }
-
-#result-text {
+#result-text,
+#fe-result-text {
   margin: 0;
   font-size: 2.5em;
   font-weight: bold;
@@ -295,7 +274,6 @@ body {
   align-items: center;
   gap: 30px;
 }
-
 .timer-display {
   background-color: var(--bg-color);
   width: 100%;
@@ -305,7 +283,6 @@ body {
   text-align: center;
   box-sizing: border-box;
 }
-
 .progress-container {
   width: 100%;
   height: 10px;
@@ -314,7 +291,6 @@ body {
   margin-bottom: 15px;
   overflow: hidden;
 }
-
 #timer-progress-bar {
   width: 100%;
   height: 100%;
@@ -322,7 +298,6 @@ body {
   border-radius: 5px;
   transition: width 0.2s linear;
 }
-
 .level-display {
   font-size: 1.5em;
   color: var(--accent-color);
@@ -331,14 +306,12 @@ body {
 #current-level {
   font-weight: bold;
 }
-
 .time-display {
   font-size: 7em;
   font-weight: bold;
   line-height: 1;
   margin-bottom: 20px;
 }
-
 .blinds-display {
   display: flex;
   justify-content: space-around;
@@ -351,7 +324,6 @@ body {
   color: #aaa;
   margin-bottom: 5px;
 }
-
 .timer-controls {
   display: flex;
   gap: 20px;
@@ -372,7 +344,6 @@ body {
   background-color: #6c757d;
   color: white;
 }
-
 .blinds-structure {
   width: 100%;
   max-width: 800px;
@@ -405,7 +376,6 @@ body {
 .blinds-structure tr.active-level {
   background-color: #3a7ca555;
 }
-
 .blinds-controls {
   text-align: center;
 }
@@ -418,11 +388,10 @@ body {
   border-radius: 5px;
   cursor: pointer;
 }
-
 .delete-level-btn {
   padding: 5px 10px;
   font-size: 0.9em;
-  background-color: #6c757d; /* Gray color */
+  background-color: #6c757d;
   color: white;
   border: none;
   border-radius: 5px;
@@ -430,16 +399,14 @@ body {
   transition: background-color 0.2s;
   white-space: nowrap;
 }
-
 .delete-level-btn:hover {
-  background-color: #dc3545; /* Red color on hover */
+  background-color: #dc3545;
 }
-
 #start-pause-btn.paused {
   background-color: #dc3545;
 }
 
-/* ===== モーダルウィンドウ（擬似ポップアップ）スタイル ===== */
+/* ===== モーダルウィンドウ ===== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -454,12 +421,10 @@ body {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
-
 .modal-overlay.visible {
   display: flex;
   opacity: 1;
 }
-
 .modal-content {
   background-color: var(--surface-color);
   padding: 30px 40px;
@@ -472,18 +437,15 @@ body {
 .modal-overlay.visible .modal-content {
   transform: scale(1);
 }
-
 .modal-content p {
   margin: 0 0 25px 0;
   font-size: 1.2em;
 }
-
 .modal-actions {
   display: flex;
   justify-content: center;
   gap: 20px;
 }
-
 .modal-actions button {
   padding: 12px 30px;
   font-size: 1em;
@@ -496,23 +458,20 @@ body {
 .modal-actions button:active {
   transform: scale(0.95);
 }
-
 #modal-confirm-btn {
   background-color: #dc3545;
   color: white;
 }
-
 #modal-cancel-btn {
   background-color: #6c757d;
   color: white;
 }
 
-/* ===== レンジファインダースタイル ===== */
+/* ===== レンジファインダー ===== */
 .range-finder-container {
   display: flex;
   gap: 20px;
 }
-
 .controls-panel {
   flex: 1;
   display: flex;
@@ -534,15 +493,12 @@ body {
   border-radius: 5px;
   font-size: 1em;
 }
-
-.position-buttons,
-.action-buttons {
+.position-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
-.pos-btn,
-.action-btn {
+.pos-btn {
   padding: 10px 15px;
   border: 1px solid var(--primary-color);
   background-color: transparent;
@@ -551,21 +507,17 @@ body {
   cursor: pointer;
   transition: background-color 0.2s;
 }
-.pos-btn:hover,
-.action-btn:hover {
+.pos-btn:hover {
   background-color: var(--primary-color);
 }
-.pos-btn.active,
-.action-btn.active {
+.pos-btn.active {
   background-color: var(--accent-color);
   border-color: var(--accent-color);
   font-weight: bold;
 }
-
 .range-display-area {
   flex: 2;
 }
-
 .range-grid {
   display: grid;
   grid-template-columns: repeat(13, 1fr);
@@ -576,7 +528,6 @@ body {
   margin: 0 auto;
   border: 1px solid #555;
 }
-
 .grid-cell {
   display: flex;
   justify-content: center;
@@ -595,11 +546,10 @@ body {
 }
 .cell-three-bet {
   background-color: #1e88e5;
-} /* 3-Bet用の新しい色 */
+}
 .cell-fold {
   background-color: #546e7a;
 }
-
 .range-legend {
   display: flex;
   justify-content: center;
@@ -624,12 +574,12 @@ body {
 }
 .legend-color.three-bet {
   background-color: #1e88e5;
-} /* 3-Bet用の新しい色 */
+}
 .legend-color.fold {
   background-color: #546e7a;
 }
 
-/* ===== GTO Trainer Styles ===== */
+/* ===== GTO Trainer ===== */
 .trainer-container {
   max-width: 800px;
   margin: 0 auto;
@@ -637,7 +587,6 @@ body {
   flex-direction: column;
   gap: 20px;
 }
-
 .trainer-header {
   display: flex;
   justify-content: space-between;
@@ -646,12 +595,10 @@ body {
   padding: 15px;
   border-radius: 8px;
 }
-
 .trainer-score {
   font-size: 1.2em;
   font-weight: bold;
 }
-
 #question-type-select {
   padding: 10px;
   background-color: var(--primary-color);
@@ -660,7 +607,6 @@ body {
   border-radius: 5px;
   font-size: 1em;
 }
-
 .question-area {
   background-color: var(--bg-color);
   padding: 30px 20px;
@@ -671,19 +617,16 @@ body {
   justify-content: center;
   text-align: center;
 }
-
 .question-text {
   font-size: 1.3em;
   line-height: 1.6;
   margin: 0;
 }
-
 .answer-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
 }
-
 .answer-btn {
   background-color: var(--primary-color);
   border: 1px solid #555;
@@ -694,51 +637,41 @@ body {
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
 }
-
 .answer-btn:hover {
   background-color: #3a3a4a;
 }
-
 .answer-btn:active {
   transform: scale(0.97);
 }
-
 .answer-btn.correct {
-  background-color: #28a745; /* Green */
+  background-color: #28a745;
   border-color: #28a745;
   color: white;
 }
-
 .answer-btn.incorrect {
-  background-color: #dc3545; /* Red */
+  background-color: #dc3545;
   border-color: #dc3545;
   color: white;
 }
-
 .feedback-area {
   text-align: center;
   min-height: 60px;
 }
-
 #feedback-text {
   font-size: 1.5em;
   font-weight: bold;
   margin: 0;
 }
-
 #feedback-text.correct {
   color: #28a745;
 }
-
 #feedback-text.incorrect {
   color: #dc3545;
 }
-
 #explanation-text {
   margin-top: 10px;
   color: #ccc;
 }
-
 .trainer-button {
   background-color: var(--accent-color);
   border: none;
@@ -750,474 +683,378 @@ body {
   cursor: pointer;
   transition: transform 0.1s;
 }
-
 .trainer-button:active {
   transform: scale(0.98);
 }
 
+/* ===== テキサスホールデム ===== */
+#texas-holdem #th-setup-screen {
+  background-color: var(--primary-color);
+  padding: 30px;
+  border-radius: 8px;
+  text-align: center;
+}
+#texas-holdem .setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-width: 300px;
+  margin: 0 auto 20px auto;
+}
+#texas-holdem .setup-form label {
+  font-size: 1.1em;
+  text-align: left;
+}
+#texas-holdem .setup-form input,
+#texas-holdem .setup-form select {
+  padding: 10px;
+  font-size: 1em;
+  border-radius: 5px;
+  border: 1px solid #7f8c8d;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+}
+#texas-holdem #th-start-game-btn {
+  background-color: #28a745;
+  color: white;
+  font-weight: bold;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#texas-holdem #th-game-screen {
+  display: none;
+  flex-direction: column;
+  gap: 15px;
+}
+#texas-holdem .game-board {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+#texas-holdem #th-players-wrapper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 15px;
+}
+#texas-holdem .player-area {
+  background-color: var(--primary-color);
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  border: 3px solid transparent;
+  transition: all 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#texas-holdem .player-area.active-turn {
+  border-color: #f1c40f;
+  box-shadow: 0 0 12px rgba(241, 196, 15, 0.6);
+}
+#texas-holdem .player-area.eliminated {
+  opacity: 0.5;
+  background-color: #1a252f;
+  border-color: #1a252f;
+}
+#texas-holdem .player-area.folded {
+  opacity: 0.6;
+}
+#texas-holdem .player-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+}
+#texas-holdem .player-header h2 {
+  margin: 0;
+  font-size: 1.3em;
+}
+#texas-holdem .dealer-btn {
+  background-color: white;
+  color: #333;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  font-weight: bold;
+  display: none;
+  font-size: 1em;
+}
+#texas-holdem .dealer-btn.active {
+  display: block;
+}
+#texas-holdem .blind-indicator {
+  background-color: #7f8c8d;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.8em;
+  font-weight: bold;
+  display: none;
+}
+#texas-holdem .blind-indicator.active {
+  display: inline-block;
+}
+#texas-holdem .stack {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #2ecc71;
+  margin: 0;
+}
+#texas-holdem .bet-display {
+  color: #f1c40f;
+  font-size: 1.1em;
+  min-height: 20px;
+}
+#texas-holdem .hand-rank-display {
+  font-weight: bold;
+  color: #2ecc71;
+  min-height: 20px;
+}
+#texas-holdem .actions,
+#texas-holdem .raise-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+#texas-holdem .raise-actions {
+  margin-top: 5px;
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+}
+#texas-holdem .raise-controls {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: center;
+}
+#texas-holdem .raise-slider {
+  flex-grow: 1;
+}
+#texas-holdem .raise-input {
+  width: 80px;
+  text-align: center;
+}
+#texas-holdem .actions button,
+#texas-holdem .raise-actions button {
+  padding: 10px 12px;
+  font-size: 0.9em;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  color: white;
+}
+#texas-holdem .center-area {
+  text-align: center;
+  background-color: #1a252f;
+  padding: 15px;
+  border-radius: 8px;
+}
+#texas-holdem #th-pot-display h3 {
+  margin: 0 0 10px 0;
+}
+#texas-holdem #th-pot-total-value {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #f1c40f;
+}
+#texas-holdem .cards-area {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin: 10px 0;
+  min-height: 55px;
+}
+#texas-holdem .card {
+  width: 40px;
+  height: 55px;
+  background-color: #ffffff;
+  border-radius: 4px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1.2em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+  color: black;
+}
+#texas-holdem .card.red {
+  color: #e74c3c;
+}
+#texas-holdem .card.black {
+  color: #2c3e50;
+}
+#texas-holdem .card-back {
+  background: linear-gradient(
+    135deg,
+    #4e6a85 25%,
+    #34495e 25%,
+    #34495e 50%,
+    #4e6a85 50%,
+    #4e6a85 75%,
+    #34495e 75%,
+    #34495e 100%
+  );
+  background-size: 14px 14px;
+}
+#texas-holdem .community-cards-area .card {
+  width: 50px;
+  height: 70px;
+  font-size: 1.4em;
+}
+#texas-holdem #th-showdown-results-area {
+  display: none;
+  padding: 15px;
+  border: 1px dashed #7f8c8d;
+  border-radius: 8px;
+  background-color: var(--primary-color);
+}
+#texas-holdem #th-showdown-results-area h3 {
+  margin: 0 0 10px;
+  color: #f1c40f;
+}
+#texas-holdem #th-showdown-results-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+#texas-holdem #th-showdown-results-list .winner {
+  font-weight: bold;
+  color: #2ecc71;
+}
+#texas-holdem .btn-fold {
+  background-color: #e74c3c;
+}
+#texas-holdem .btn-call {
+  background-color: #27ae60;
+}
+#texas-holdem .btn-check {
+  background-color: #e67e22;
+}
+#texas-holdem .btn-raise {
+  background-color: #3498db;
+  width: 100%;
+  padding: 12px;
+}
+#texas-holdem .btn-all-in {
+  background-color: #9b59b6;
+}
+#texas-holdem .btn-next-hand {
+  background-color: #d35400;
+  color: white;
+  font-weight: bold;
+  padding: 12px 20px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#texas-holdem button:disabled {
+  background-color: #7f8c8d !important;
+  cursor: not-allowed;
+}
+#texas-holdem #th-custom-alert {
+  position: fixed;
+  top: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #f1c40f;
+  color: var(--primary-color);
+  padding: 15px 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  font-size: 1.1em;
+  font-weight: bold;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s, visibility 0.4s, top 0.4s;
+}
+#texas-holdem #th-custom-alert.show {
+  opacity: 1;
+  visibility: visible;
+}
+.btn-reset-game {
+  position: absolute;
+  top: 130px;
+  right: 20px;
+  z-index: 100;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
-  /* Header and Logo adjustments */
   .site-header {
-    padding: 0 10px; /* Reduce padding */
+    padding: 0 10px;
     justify-content: space-between;
   }
   .site-logo img {
-    height: 120px; /* Reduce logo size */
+    height: 120px;
   }
   .site-logo {
-    margin-left: -20px; /* Adjust margin */
+    margin-left: -20px;
   }
-
-  /* Navigation adjustments */
   .navigation {
     display: flex;
-    overflow-x: auto; /* Enable horizontal scrolling */
-    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-    scrollbar-width: none; /* Hide scrollbar for Firefox */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     margin-left: 0;
   }
   .navigation::-webkit-scrollbar {
-    display: none; /* Hide scrollbar for Chrome, Safari, and Opera */
+    display: none;
   }
   .nav-button {
-    flex-shrink: 0; /* Prevent buttons from shrinking */
+    flex-shrink: 0;
     font-size: 0.9em;
     padding: 8px 15px;
     margin-left: 10px;
   }
-
-  /* Existing styles */
   .range-finder-container {
     flex-direction: column;
   }
   .grid-cell {
     font-size: 2.5vw;
   }
+  .answer-options {
+    grid-template-columns: 1fr;
+  }
+  .time-display {
+    font-size: 4em;
+  }
 }
-
-/* ===== テキサスホールデム機能スタイル (v3 - Draggable UI) ===== */
-#texas-holdem .container {
-  max-width: 1200px;
-  margin: auto;
-  padding: 20px;
-  background-color: #0c2c1a;
-  border-radius: 10px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-}
-
-#texas-holdem h1,
-#texas-holdem h2,
-#texas-holdem h3 {
-  color: #f0e68c;
-  text-align: center;
-}
-
-/* Setup Screen */
-#texas-holdem #setup-screen {
-  max-width: 500px;
-  margin: 50px auto;
-  padding: 30px;
-  background: var(--surface-color);
-  border-radius: 8px;
-}
-#texas-holdem .setup-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-#texas-holdem .setup-form label {
-  font-weight: bold;
-  color: var(--accent-color);
-}
-#texas-holdem .setup-form input,
-#texas-holdem .setup-form select {
-  padding: 10px;
-  background-color: var(--bg-color);
-  border: 1px solid var(--primary-color);
-  color: var(--text-color);
-  border-radius: 4px;
-  font-size: 1em;
-}
-#texas-holdem #start-game-btn {
-  width: 100%;
-  padding: 15px;
-  font-size: 1.2em;
-  font-weight: bold;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-/* Game Screen - The new container for absolute positioning */
-#texas-holdem #game-screen {
-  position: relative;
-  width: 100%;
-  /* 画面サイズに合わせて調整 */
-  height: 80vh;
-  max-height: 900px;
-  background-color: #0c2c1a; /* フェルトの色 */
-  border: 10px solid #5d4037; /* 木枠 */
-  border-radius: 150px;
-  box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-}
-
-#texas-holdem .game-board {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-/* Center Area - for vertical/rotated community cards */
-#texas-holdem .center-area {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-#texas-holdem .community-cards-area {
-  display: flex;
-  gap: 10px;
-  /* 横向きに配置 */
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-}
-
-/* Ensure community cards are displayed inline and don't wrap */
+/* ===== テキサスホールデム カードアニメーション (修正版) ===== */
 #texas-holdem .community-cards-area .card {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-}
-
-/* Force community cards to layout horizontally */
-#texas-holdem .community-cards-area {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: nowrap;
-}
-
-#texas-holdem .community-cards-area .card {
-  display: inline-flex;
-  margin: 0;
-}
-
-/* When a player-area has inline rotation, prefer the inline transform (no extra translate) */
-#texas-holdem .player-area[data-player-id] {
-  transform-origin: center center;
-}
-
-#texas-holdem .community-cards-area .card {
-  width: 60px;
-  height: 85px;
-}
-
-/* Pot display - moved to top center */
-#texas-holdem #pot-display {
-  text-align: center;
-  background: rgba(0, 0, 0, 0.3);
-  padding: 5px 15px;
-  border-radius: 10px;
-  color: white;
-  min-width: 150px;
-}
-#texas-holdem #pot-total-value {
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #ffd700;
-}
-#texas-holdem #pot-details {
-  font-size: 0.8em;
-  color: #ccc;
-}
-
-/* Player Areas - Draggable and Rotatable */
-#texas-holdem #players-wrapper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-#texas-holdem .player-area {
-  position: absolute;
-  width: 220px; /* 少し幅を広げる */
-  padding: 10px;
-  background-color: rgba(0, 0, 0, 0.6); /* 少し濃くする */
-  border: 2px solid #444;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  cursor: move;
-  z-index: 10;
-  transition: box-shadow 0.3s, border-color 0.3s;
-  display: flex; /* Flexbox for internal layout */
-  flex-direction: column; /* 縦に並べる */
-  gap: 5px; /* パーツ間の隙間 */
-}
-
-/* Default positions for 2 players */
-#texas-holdem .player-area[data-player-id="0"] {
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-#texas-holdem .player-area[data-player-id="1"] {
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%) rotate(180deg);
-}
-
-#texas-holdem .player-area.active-turn {
-  border-color: #ffd700;
-  box-shadow: 0 0 15px #ffd700;
-}
-
-#texas-holdem .player-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: white;
-  font-weight: bold;
-  position: relative;
-  order: 1; /* 表示順 */
-}
-
-.rotate-btn {
-  position: absolute;
-  top: -15px;
-  right: -15px;
-  width: 30px;
-  height: 30px;
-  background-color: var(--accent-color);
-  color: white;
-  border: 1px solid white;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 1.2em;
-  z-index: 100;
-}
-
-.player-area.rotated {
-  transform: rotate(180deg);
-}
-
-/* Copied Card Styles */
-#texas-holdem .cards-area {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  min-height: 50px;
-  order: 3; /* 表示順 */
-}
-#texas-holdem .card {
-  width: 40px;
-  height: 56px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  position: relative;
-  background-color: white;
-  font-weight: bold;
-}
-#texas-holdem .card .rank {
-  position: absolute;
-  top: 2px;
-  left: 4px;
-  font-size: 1.2em;
-}
-#texas-holdem .card .suit {
-  position: absolute;
-  bottom: 2px;
-  right: 4px;
-  font-size: 1em;
-}
-#texas-holdem .card.red { color: #d32f2f; }
-#texas-holdem .card.black { color: #212121; }
-
-#texas-holdem .card-back {
-  background: repeating-linear-gradient(
-    45deg,
-    #64b5f6,
-    #64b5f6 5px,
-    #42a5f5 5px,
-    #42a5f5 10px
-  );
-  border: 1px solid #1976d2;
-}
-#texas-holdem .card.highlight {
-  border-color: gold;
-  box-shadow: 0 0 10px gold;
-}
-
-/* Copied other styles */
-.player-info {
-  order: 2; /* 表示順 */
-  text-align: center;
-}
-#texas-holdem .bet-display {
-  color: #ffeb3b;
-  font-weight: bold;
-  min-height: 1.2em;
-}
-#texas-holdem .hand-rank-display {
-  color: #81d4fa;
-  font-size: 0.9em;
-  font-style: italic;
-  min-height: 1.1em;
-}
-#texas-holdem .stack {
-  color: #a5d6a7;
-  font-weight: bold;
-  font-size: 1.1em;
-}
-#texas-holdem .blind-indicator {
-  font-weight: bold;
-  color: #f48fb1;
-}
-#texas-holdem .dealer-btn {
-  display: none;
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background-color: #bdbdbd;
-  color: black;
-  text-align: center;
-  line-height: 20px;
-  font-weight: bold;
-}
-#texas-holdem .player-area.folded .cards-area {
-  opacity: 0.5;
-}
-#texas-holdem .player-area.eliminated {
-  opacity: 0.4;
-  pointer-events: none;
-  border-color: #616161;
-}
-
-/* Player-specific Controls */
-#texas-holdem .player-controls {
-  order: 4; /* 表示順 */
-  display: none; /* Initially hidden */
-  flex-direction: column;
-  gap: 5px;
-}
-
-#texas-holdem .player-area.active-turn .player-controls {
-    display: flex; /* Show for active player */
-}
-
-#texas-holdem .actions,
-#texas-holdem .raise-controls {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-#texas-holdem .raise-controls {
-  margin-top: 5px;
-}
-#texas-holdem .actions button,
-#texas-holdem .raise-actions button {
-  padding: 6px 8px; /* Smaller buttons */
-  font-size: 0.9em;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  color: white;
-  flex-grow: 1;
-}
-#texas-holdem button:disabled {
-  background-color: #555 !important;
-  color: #999;
-  cursor: not-allowed;
-}
-#texas-holdem .btn-fold { background-color: #757575; }
-#texas-holdem .btn-check,
-#texas-holdem .btn-call {
-  background-color: #43a047;
-}
-#texas-holdem .btn-raise,
-#texas-holdem .btn-all-in {
-  background-color: #e53935;
-}
-#texas-holdem .raise-controls {
-  display: none; /* Initially hidden, shown by JS */
-}
-#texas-holdem .raise-slider {
-  flex-grow: 1;
-  width: 100%;
-}
-#texas-holdem .raise-input {
-  width: 70px;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  border: 1px solid var(--primary-color);
-}
-
-#texas-holdem .btn-reset-game {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  padding: 10px 15px;
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  z-index: 200;
-}
-
-#texas-holdem #showdown-results-area {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.85);
-  padding: 30px;
-  border-radius: 10px;
-  z-index: 300;
-  text-align: center;
-  border: 2px solid gold;
-}
-#texas-holdem #custom-alert {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: var(--accent-color);
-  color: white;
-  padding: 15px 25px;
-  border-radius: 8px;
-  z-index: 10001;
   opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
+  transform: scale(0.8) rotateY(-90deg);
+  transition: opacity 0.3s ease-out, transform 0.4s ease-out;
 }
-#texas-holdem #custom-alert.show {
+
+#texas-holdem .community-cards-area .card.revealed {
   opacity: 1;
-  visibility: visible;
+  transform: scale(1) rotateY(0deg);
+}
+/* ===== 用語集 カテゴリ見出し ===== */
+.glossary-category-title {
+    color: var(--accent-color);
+    margin-top: 30px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary-color);
+    font-size: 1.4em;
+}
+.glossary-category-title:first-child {
+    margin-top: 0;
 }
