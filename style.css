@@ -282,6 +282,27 @@ h2 {
   border-radius: 10px;
   text-align: center;
   box-sizing: border-box;
+  position: relative; /* クロック表示のため */
+}
+#clock-display {
+  display: none; /* 初期状態では非表示 */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.95);
+  color: #f1c40f;
+  font-family: "Courier New", Courier, monospace; /* デジタル風フォント */
+  font-size: 12em; /* フォントサイズを拡大 */
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  border-radius: 10px;
+  text-shadow: 0 0 20px rgba(241, 196, 15, 0.7); /* 光彩効果 */
+  display: none; /* JSで制御 */
 }
 .progress-container {
   width: 100%;
@@ -311,6 +332,10 @@ h2 {
   font-weight: bold;
   line-height: 1;
   margin-bottom: 20px;
+  transition: opacity 0.3s;
+}
+.time-display.dimmed {
+  opacity: 0.2;
 }
 .blinds-display {
   display: flex;
@@ -344,6 +369,13 @@ h2 {
   background-color: #6c757d;
   color: white;
 }
+#clock-btn {
+  background-color: #f39c12; /* オレンジ色 */
+  color: white;
+}
+#clock-btn.clock-active {
+  background-color: #c0392b; /* 赤色 */
+}
 .blinds-structure {
   width: 100%;
   max-width: 800px;
@@ -372,6 +404,7 @@ h2 {
   border: 1px solid #555;
   padding: 5px;
   text-align: center;
+  border-radius: 5px;
 }
 .blinds-structure tr.active-level {
   background-color: #3a7ca555;

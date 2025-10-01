@@ -96,6 +96,8 @@ function initializeTournamentTimer() {
 
     const startPauseBtn = document.getElementById("start-pause-btn");
     const resetBtn = document.getElementById("reset-btn");
+    const clockBtn = document.getElementById("clock-btn");
+    const clockDisplay = document.getElementById("clock-display");
     const currentLevelDisplay = document.getElementById("current-level");
     const currentSbBbDisplay = document.getElementById("current-sb-bb");
     const nextSbBbDisplay = document.getElementById("next-sb-bb");
@@ -108,11 +110,12 @@ function initializeTournamentTimer() {
     const modalCancelBtn = document.getElementById("modal-cancel-btn");
 
     let blindsStructure = [
-        { time: 15, sb: 100, bb: 200, ante: 0 }, { time: 15, sb: 150, bb: 300, ante: 0 },
-        { time: 15, sb: 200, bb: 400, ante: 50 }, { time: 15, sb: 300, bb: 600, ante: 75 },
-        { time: 15, sb: 400, bb: 800, ante: 100 },
+        { time: 8, sb: 1, bb: 2 }, { time: 8, sb: 2, bb: 5 },
+        { time: 8, sb: 5, bb: 10 }, { time: 8, sb: 10, bb: 20 },
+        { time: 8, sb: 15, bb: 30 },
     ];
     let timerInterval = null, timeLeft = 0, isRunning = false, currentLevelIndex = 0;
+    let clockTimerInterval = null, isClockRunning = false;
 
     function renderBlindsTable() {
         if (!blindsTbody) return;
@@ -125,7 +128,6 @@ function initializeTournamentTimer() {
                 <td><input type="number" value="${level.time}" data-index="${index}" data-key="time"></td>
                 <td><input type="number" value="${level.sb}" data-index="${index}" data-key="sb"></td>
                 <td><input type="number" value="${level.bb}" data-index="${index}" data-key="bb"></td>
-                <td><input type="number" value="${level.ante}" data-index="${index}" data-key="ante"></td>
                 <td><button class="delete-level-btn" data-index="${index}">削除</button></td>
             `;
             blindsTbody.appendChild(row);
@@ -137,8 +139,8 @@ function initializeTournamentTimer() {
         if(timeLeftDisplay) timeLeftDisplay.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
         const currentLevel = blindsStructure[currentLevelIndex]; const nextLevel = blindsStructure[currentLevelIndex + 1];
         if(currentLevelDisplay) currentLevelDisplay.textContent = currentLevelIndex + 1;
-        if(currentSbBbDisplay && currentLevel) currentSbBbDisplay.textContent = `${currentLevel.sb} / ${currentLevel.bb} Ante: ${currentLevel.ante}`;
-        if(nextSbBbDisplay) nextSbBbDisplay.textContent = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb} Ante: ${nextLevel.ante}` : "Final Level";
+        if(currentSbBbDisplay && currentLevel) currentSbBbDisplay.textContent = `${currentLevel.sb} / ${currentLevel.bb}`;
+        if(nextSbBbDisplay) nextSbBbDisplay.textContent = nextLevel ? `${nextLevel.sb} / ${nextLevel.bb}` : "Final Level";
         const totalTimeForLevel = blindsStructure[currentLevelIndex]?.time * 60 || 0;
         const progressBar = document.getElementById("timer-progress-bar");
         if (progressBar) { const progressPercentage = totalTimeForLevel > 0 ? (timeLeft / totalTimeForLevel) * 100 : 100; progressBar.style.width = `${progressPercentage}%`; }
@@ -154,9 +156,46 @@ function initializeTournamentTimer() {
     }
     function startTimer() { if (isRunning) return; isRunning = true; startPauseBtn.textContent = "PAUSE"; startPauseBtn.classList.add("paused"); timerInterval = setInterval(tick, 1000); }
     function pauseTimer() { isRunning = false; clearInterval(timerInterval); startPauseBtn.textContent = "START"; startPauseBtn.classList.remove("paused"); }
-    function executeReset() { pauseTimer(); currentLevelIndex = 0; timeLeft = blindsStructure.length > 0 ? blindsStructure[0].time * 60 : 0; updateDisplay(); renderBlindsTable(); }
+    function executeReset() { stopClock(); pauseTimer(); currentLevelIndex = 0; timeLeft = blindsStructure.length > 0 ? blindsStructure[0].time * 60 : 0; updateDisplay(); renderBlindsTable(); }
+
+    function startClock() {
+        isClockRunning = true;
+        clockBtn.textContent = "CANCEL";
+        clockBtn.classList.add("clock-active");
+        startPauseBtn.disabled = true;
+        resetBtn.disabled = true;
+
+        let clockTimeLeft = 30;
+        clockDisplay.textContent = clockTimeLeft;
+        clockDisplay.style.display = "flex";
+        timeLeftDisplay.classList.add("dimmed");
+
+        clockTimerInterval = setInterval(() => {
+            clockTimeLeft--;
+            clockDisplay.textContent = clockTimeLeft;
+            if (clockTimeLeft < 0) {
+                stopClock(true); // 時間切れ
+            }
+        }, 1000);
+    }
+
+    function stopClock(timeIsUp = false) {
+        clearInterval(clockTimerInterval);
+        isClockRunning = false;
+        if (timeIsUp && alarmSound) alarmSound.play().catch(e => console.log("Audio play failed:", e));
+        
+        clockDisplay.style.display = "none";
+        timeLeftDisplay.classList.remove("dimmed");
+        clockBtn.textContent = "CLOCK";
+        clockBtn.classList.remove("clock-active");
+        startPauseBtn.disabled = false;
+        resetBtn.disabled = false;
+    }
+
     startPauseBtn?.addEventListener("click", () => isRunning ? pauseTimer() : startTimer());
     resetBtn?.addEventListener("click", () => confirmModal.classList.add('visible'));
+    clockBtn?.addEventListener("click", () => isClockRunning ? stopClock() : startClock());
+
     modalConfirmBtn?.addEventListener("click", () => { executeReset(); confirmModal.classList.remove('visible'); });
     modalCancelBtn?.addEventListener("click", () => confirmModal.classList.remove('visible'));
     saveStructureBtn?.addEventListener("click", () => {
@@ -173,7 +212,7 @@ function initializeTournamentTimer() {
         }
     });
     addLevelBtn?.addEventListener("click", () => {
-        const last = blindsStructure[blindsStructure.length - 1] || { time: 15, sb: 50, bb: 100, ante: 0 };
+        const last = blindsStructure[blindsStructure.length - 1] || { time: 8, sb: 50, bb: 100 };
         blindsStructure.push({ ...last, sb: last.bb, bb: last.bb * 2 });
         renderBlindsTable();
     });
