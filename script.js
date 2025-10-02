@@ -222,15 +222,20 @@ function initializeTournamentTimer() {
 function initializeRangeFinder() {
     const playerCountSelect = document.getElementById("player-count");
     if(!playerCountSelect) return;
+    const stackSizeSelect = document.getElementById("stack-size");
     const positionButtonsContainer = document.getElementById("position-buttons"), rangeGrid = document.getElementById("range-grid");
     const CARDS = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
     const POSITIONS = { "6max": ["UTG", "HJ", "CO", "BTN", "SB", "BB"], hu: ["BTN", "BB"] };
-    let currentSelection = { playerCount: "6max", position: "UTG" };
-    function getHandName(i, j) { const c1 = CARDS[i], c2 = CARDS[j]; return i === j ? `${c1}${c2}p` : (i < j ? `${c1}${c2}s` : `${c2}${c1}o`); }
+    let currentSelection = { 
+        stackSize: stackSizeSelect.value, 
+        playerCount: playerCountSelect.value, 
+        position: "UTG" 
+    };
+    function getHandName(i, j) { const c1 = CARDS[i], c2 = CARDS[j]; return i === j ? `${c1}${c2}` : (i < j ? `${c1}${c2}s` : `${c2}${c1}o`); }
     function expandRange(range) { const expanded = new Set(); if(!range) return expanded; range.forEach(n => { expanded.add(n); if (n.endsWith('s') || n.endsWith('o')) { expanded.add(`${n[1]}${n[0]}${n[2]}`); } }); return expanded; }
     function renderRangeGrid() {
         if (!rangeGrid || typeof rangeData === 'undefined') return;
-        const currentRange = rangeData[currentSelection.playerCount]?.[currentSelection.position];
+        const currentRange = rangeData[currentSelection.stackSize]?.[currentSelection.playerCount]?.[currentSelection.position];
         rangeGrid.innerHTML = "";
         if (!currentRange) { rangeGrid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; align-self: center;">レンジ定義なし</div>`; return; }
         const raiseHands = expandRange(currentRange.RAISE), callHands = expandRange(currentRange.CALL), threeBetHands = expandRange(currentRange["3-BET"]);
@@ -238,7 +243,7 @@ function initializeRangeFinder() {
             for (let j = 0; j < 13; j++) {
                 const handName = getHandName(i, j);
                 const cell = document.createElement("div");
-                cell.className = "grid-cell"; cell.textContent = handName.replace(/[pso]/, "");
+                cell.className = "grid-cell"; cell.textContent = handName;
                 if (threeBetHands.has(handName)) cell.classList.add("cell-three-bet");
                 else if (raiseHands.has(handName)) cell.classList.add("cell-raise");
                 else if (callHands.has(handName)) cell.classList.add("cell-call");
@@ -258,6 +263,7 @@ function initializeRangeFinder() {
             positionButtonsContainer.appendChild(button);
         });
     }
+    stackSizeSelect.addEventListener("change", (e) => { currentSelection.stackSize = e.target.value; renderRangeGrid(); });
     playerCountSelect.addEventListener("change", (e) => { currentSelection.playerCount = e.target.value; currentSelection.position = POSITIONS[currentSelection.playerCount][0]; updatePositionButtons(); renderRangeGrid(); });
     positionButtonsContainer.addEventListener("click", (e) => { if (e.target.classList.contains("pos-btn")) { currentSelection.position = e.target.dataset.pos; updatePositionButtons(); renderRangeGrid(); } });
     updatePositionButtons(); renderRangeGrid();
@@ -398,10 +404,9 @@ const TexasHoldemGame = (() => {
             
             const cardsArea = document.getElementById(`cards-area-${p.id}`);
             const isHandOver = state.streetIndex > 3, activePlayersInHand = state.players.filter(pl => !pl.isEliminated && !pl.isFolded);
-            const isBettingOver = activePlayersInHand.length > 0 && activePlayersInHand.filter(pl => !pl.isAllIn).length <= 1;
-            const showThisPlayersCards = isHandOver || isBettingOver || (p.id === state.activePlayerIndex && !state.isAnimating);
+            const showThisPlayersCards = !!state.showdownWinners || (p.id === state.activePlayerIndex && !state.isAnimating);
             cardsArea.innerHTML = p.hand.map(card => renderCard(card, !showThisPlayersCards)).join('');
-            document.getElementById(`hand-rank-${p.id}`).textContent = ((isHandOver || isBettingOver) && p.handDetails) ? p.handDetails.name : '';
+            document.getElementById(`hand-rank-${p.id}`).textContent = (state.showdownWinners && p.handDetails) ? p.handDetails.name : '';
             
             const allButtons = area.querySelectorAll('.actions button, .raise-actions button, .raise-actions input');
             const isDisabled = p.id !== state.activePlayerIndex || p.isEliminated || p.isFolded || state.isAnimating;
@@ -430,16 +435,33 @@ const TexasHoldemGame = (() => {
 
     function revealCommunityCardsWithAnimation() {
         state.isAnimating = true;
-        const cardsToShow = state.streetIndex === 1 ? 3 : state.streetIndex === 2 ? 4 : state.streetIndex >= 3 ? 5 : 0;
-        dom.communityCardsArea.innerHTML = state.communityCards.slice(0, cardsToShow).map(c => renderCard(c)).join('');
-        const cards = dom.communityCardsArea.querySelectorAll('.card');
+        let cardsToAnimate;
+
+        if (state.streetIndex === 1) {
+            dom.communityCardsArea.innerHTML = state.communityCards.slice(0, 3).map(c => renderCard(c)).join('');
+            cardsToAnimate = dom.communityCardsArea.querySelectorAll('.card');
+        } else if (state.streetIndex === 2) {
+            const turnCardHTML = renderCard(state.communityCards[3]);
+            dom.communityCardsArea.insertAdjacentHTML('beforeend', turnCardHTML);
+            cardsToAnimate = [dom.communityCardsArea.lastElementChild];
+        } else if (state.streetIndex === 3) {
+            const riverCardHTML = renderCard(state.communityCards[4]);
+            dom.communityCardsArea.insertAdjacentHTML('beforeend', riverCardHTML);
+            cardsToAnimate = [dom.communityCardsArea.lastElementChild];
+        }
+
         let delay = 0;
-        cards.forEach((card) => {
-            if (!card.classList.contains('revealed')) {
-                 setTimeout(() => card.classList.add('revealed'), delay);
-                delay += 300;
-            }
-        });
+        if (cardsToAnimate) {
+            cardsToAnimate.forEach((card) => {
+                if (card && !card.classList.contains('revealed')) {
+                    setTimeout(() => {
+                        card.classList.add('revealed');
+                    }, delay);
+                    delay += 300;
+                }
+            });
+        }
+
         setTimeout(() => {
             state.isAnimating = false;
             const activeForBetting = state.players.filter(p => !p.isEliminated && !p.isFolded && !p.isAllIn);
