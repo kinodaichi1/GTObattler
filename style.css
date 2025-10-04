@@ -86,11 +86,22 @@ body {
   color: var(--text-color);
   font-size: 1em;
   font-weight: bold;
-  padding: 10px 20px;
-  margin-left: 15px;
+  
+  /* ▼▼▼ ここから変更・追加 ▼▼▼ */
+  height: 46px; /* 高さを46pxに直接指定 */
+  padding: 0 20px; /* 上下のpaddingを0にし、左右は維持 */
+  display: inline-flex; /* テキストを中央揃えにするために追加 */
+  align-items: center;   /* テキストを垂直方向に中央揃え */
+  justify-content: center; /* テキストを水平方向に中央揃え */
+  box-sizing: border-box; /* paddingとborderを高さに含める */
+  /* ▲▲▲ ここまで変更・追加 ▲▲▲ */
+
+  margin: 0 5px;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.2s;
+  min-width: 100px;
+  /* text-align: center; は不要になります */
 }
 .nav-button:hover {
   background-color: var(--primary-color);
@@ -1090,4 +1101,323 @@ h2 {
 }
 .glossary-category-title:first-child {
     margin-top: 0;
+}
+/* ===== GTC Calculator ===== */
+.gtc-container {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.gtc-setup, .gtc-players-info, .gtc-board-info {
+  background-color: var(--bg-color);
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.gtc-container h3 {
+  color: var(--accent-color);
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--primary-color);
+  padding-bottom: 10px;
+}
+
+.gtc-container h4 {
+    color: #e0e0e0;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.gtc-input-group {
+  margin-bottom: 15px;
+}
+
+.gtc-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.gtc-input-group .radio-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.gtc-input-group input[type="number"],
+.gtc-input-group input[type="text"],
+.gtc-input-group select {
+  background-color: var(--surface-color);
+  border: 1px solid var(--primary-color);
+  color: var(--text-color);
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+#gtc-board-cards, .hand-inputs {
+    display: flex;
+    gap: 10px;
+}
+
+#gtc-board-cards input, .hand-inputs input {
+    width: 40px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.gtc-player-form {
+    background-color: var(--surface-color);
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid var(--accent-color);
+}
+
+.gtc-player-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px 20px;
+}
+
+.gtc-rank-input, .gtc-suit-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding: 10px;
+    text-align: center;
+    width: auto;
+    min-width: 60px;
+    flex-grow: 1;
+    text-align-last: center;
+}
+
+#gtc-analyze-btn {
+  background-color: var(--accent-color);
+  border: none;
+  color: #fff;
+  padding: 15px;
+  font-size: 1.2em;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  width: 100%;
+}
+
+#gtc-analyze-btn:active {
+  transform: scale(0.98);
+}
+
+#gtc-analysis-screen {
+    text-align: center;
+    padding: 40px;
+}
+
+#gtc-result-area {
+    background-color: var(--bg-color);
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+/* ===== GTC Calculator New Styles ===== */
+.card-input-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.card-input {
+    display: flex;
+    gap: 5px;
+}
+
+.gtc-rank-input, .gtc-suit-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding: 10px 5px;
+    text-align: center;
+    border: 1px solid var(--primary-color);
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    border-radius: 5px;
+    font-size: 1em;
+    width: 65px;
+}
+
+#gtc-result-view {
+    padding: 20px;
+    background-color: var(--bg-color);
+    border-radius: 8px;
+}
+
+#gtc-result-content {
+    margin-bottom: 25px;
+}
+
+.gtc-result-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.gtc-result-actions button {
+  background-color: var(--primary-color);
+  border: 1px solid var(--accent-color);
+  color: var(--text-color);
+  padding: 12px 25px;
+  font-size: 1em;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.gtc-result-actions button:hover {
+    background-color: var(--accent-color);
+}
+
+#gtc-reset-btn {
+    border-color: #dc3545;
+}
+
+#gtc-reset-btn:hover {
+    background-color: #dc3545;
+}
+  /* ===== GTC Action History ===== */
+  .gtc-section-box {
+    background-color: var(--bg-color);
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+  }
+
+  .action-history-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      background-color: var(--surface-color);
+      padding: 10px;
+      border-radius: 5px;
+  }
+
+  .action-history-row select, .action-history-row input {
+      padding: 8px;
+      font-size: 0.9em;
+  }
+
+  .action-history-row .gtc-action-street {
+      flex-basis: 120px;
+  }
+  .action-history-row .gtc-action-player {
+      flex-basis: 120px;
+  }
+  .action-history-row .gtc-action-type {
+      flex-basis: 120px;
+  }
+  .action-history-row .gtc-action-amount {
+      flex-basis: 80px;
+  }
+
+  .gtc-mini-btn, .gtc-remove-action-btn {
+      background-color: var(--primary-color);
+      border: 1px solid var(--accent-color);
+      color: var(--text-color);
+      padding: 8px 12px;
+      font-size: 0.9em;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+  }
+
+  .gtc-mini-btn:hover {
+      background-color: var(--accent-color);
+  }
+
+  .gtc-remove-action-btn {
+      background-color: #6c757d;
+      border-color: #6c757d;
+      margin-left: auto;
+  }
+
+  .gtc-remove-action-btn:hover {
+      background-color: #dc3545;
+      border-color: #dc3545;
+  }
+
+/* ===== GTC Action History Inputs ===== */
+.action-history-row select, 
+.action-history-row input[type="number"] {
+  background-color: var(--surface-color);
+  color: var(--text-color);
+  border: 1px solid var(--primary-color);
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 1em;
+  font-family: inherit; /* Ensure font matches the rest of the site */
+}
+
+.action-history-row select:focus,
+.action-history-row input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 5px var(--accent-color);
+}
+
+/* ===== GTC Result View Enhancements ===== */
+.gtc-result-summary p {
+  line-height: 1.7;
+}
+.gtc-best-action {
+  color: #28a745; /* 緑色 */
+  font-weight: bold;
+}
+.gtc-best-action-ev {
+  color: #28a745; /* 緑色 */
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.gtc-ev-list {
+  list-style: none;
+  padding: 0;
+}
+.gtc-ev-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--primary-color);
+  font-size: 1.1em;
+}
+.gtc-ev-list li:last-child {
+  border-bottom: none;
+}
+.action-name {
+  color: #cccccc;
+}
+.action-ev {
+  font-weight: bold;
+}
+
+/* ===== Spinner Animation ===== */
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-left-color: var(--accent-color);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+ @keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
