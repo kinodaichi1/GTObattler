@@ -304,7 +304,7 @@ const rangeData = {
           "KJo", "KTo", "K9o",
           "QJo", "QTo", "Q9o",
           "JTo", "J9o",
-          "T9o"
+          "T9o",
         ]
       }
     },
