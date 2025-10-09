@@ -88,20 +88,20 @@ body {
   font-weight: bold;
   
   /* ▼▼▼ ここから変更・追加 ▼▼▼ */
-  height: 46px; /* 高さを46pxに直接指定 */
-  padding: 0 20px; /* 上下のpaddingを0にし、左右は維持 */
-  display: inline-flex; /* テキストを中央揃えにするために追加 */
-  align-items: center;   /* テキストを垂直方向に中央揃え */
-  justify-content: center; /* テキストを水平方向に中央揃え */
-  box-sizing: border-box; /* paddingとborderを高さに含める */
-  /* ▲▲▲ ここまで変更・追加 ▲▲▲ */
+  height: 46px; /* 鬮倥＆繧46px縺ｫ逶ｴ謗･謖ｮ */
+  padding: 0 20px; /* 荳贋ｸ九padding繧0縺ｫ縺励∝ｷｦ蜿ｳ縺ｯ邯ｭ謖 */
+  display: inline-flex; /* 繝く繧ｹ繝医ｒ荳ｭ螟ｮ謠∴縺ｫ縺吶ｋ縺溘ａ縺ｫ霑ｽ蜉 */
+  align-items: center;   /* 繝く繧ｹ繝医ｒ蝙ら峩譁ｹ蜷代↓荳ｭ螟ｮ謠∴ */
+  justify-content: center; /* 繝く繧ｹ繝医ｒ豌ｴ蟷ｳ譁ｹ蜷代↓荳ｭ螟ｮ謠∴ */
+  box-sizing: border-box; /* padding縺ｨborder繧帝ｫ倥＆縺ｫ蜷ｫ繧√ｋ */
+  /* 笆ｲ笆ｲ笆ｲ 縺薙％縺ｾ縺ｧ螟画峩繝ｻ霑ｽ蜉 笆ｲ笆ｲ笆ｲ */
 
   margin: 0 5px;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.2s;
   min-width: 100px;
-  /* text-align: center; は不要になります */
+  /* text-align: center; 縺ｯ荳崎ｦ√↓縺ｪ繧翫∪縺 */
 }
 .nav-button:hover {
   background-color: var(--primary-color);
@@ -129,7 +129,7 @@ h2 {
   color: var(--accent-color);
 }
 
-/* ===== 用語集スタイル ===== */
+/* ===== 逕ｨ隱樣寔繧ｹ繧ｿ繧､繝ｫ ===== */
 .glossary-item {
   margin-bottom: 10px;
 }
@@ -150,7 +150,7 @@ h2 {
   background-color: var(--accent-color);
 }
 .glossary-term::after {
-  content: "▼";
+  content: "笆ｼ";
   position: absolute;
   right: 20px;
   transition: transform 0.3s;
@@ -174,7 +174,7 @@ h2 {
   padding: 0 20px;
 }
 
-/* ===== 計算機セクションの共通スタイル ===== */
+/* ===== 險育ｮ玲ｩ溘そ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮ蜈ｱ騾壹せ繧ｿ繧､繝ｫ ===== */
 .calc-nav {
   display: flex;
   justify-content: center;
@@ -219,7 +219,7 @@ h2 {
   font-size: 1.5em;
 }
 
-/* ===== オッズ計算機スタイル ===== */
+/* ===== 繧ｪ繝ぜ險育ｮ玲ｩ溘せ繧ｿ繧､繝ｫ ===== */
 .calculator-container {
   max-width: 500px;
   margin: 0 auto;
@@ -278,7 +278,7 @@ h2 {
   font-weight: bold;
 }
 
-/* ===== トーナメントタイマースタイル ===== */
+/* ===== 繝医繝翫Γ繝ｳ繝医ち繧､繝槭繧ｹ繧ｿ繧､繝ｫ ===== */
 .timer-container {
   display: flex;
   flex-direction: column;
@@ -293,10 +293,10 @@ h2 {
   border-radius: 10px;
   text-align: center;
   box-sizing: border-box;
-  position: relative; /* クロック表示のため */
+  position: relative; /* 繧ｯ繝ｭ繝け陦ｨ遉ｺ縺ｮ縺溘ａ */
 }
 #clock-display {
-  display: none; /* 初期状態では非表示 */
+  display: none; /* 蛻晄悄迥ｶ諷九〒縺ｯ髱櫁｡ｨ遉ｺ */
   position: absolute;
   top: 0;
   left: 0;
@@ -304,16 +304,16 @@ h2 {
   height: 100%;
   background-color: rgba(0, 0, 0, 0.95);
   color: #f1c40f;
-  font-family: "Courier New", Courier, monospace; /* デジタル風フォント */
-  font-size: 12em; /* フォントサイズを拡大 */
+  font-family: "Courier New", Courier, monospace; /* 繝ず繧ｿ繝ｫ鬚ｨ繝輔か繝ｳ繝 */
+  font-size: 12em; /* 繝輔か繝ｳ繝医し繧､繧ｺ繧呈僑螟ｧ */
   font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
   border-radius: 10px;
-  text-shadow: 0 0 20px rgba(241, 196, 15, 0.7); /* 光彩効果 */
-  display: none; /* JSで制御 */
+  text-shadow: 0 0 20px rgba(241, 196, 15, 0.7); /* 蜈牙ｽｩ蜉ｹ譫 */
+  display: none; /* JS縺ｧ蛻ｶ蠕｡ */
 }
 .progress-container {
   width: 100%;
@@ -381,11 +381,11 @@ h2 {
   color: white;
 }
 #clock-btn {
-  background-color: #f39c12; /* オレンジ色 */
+  background-color: #f39c12; /* 繧ｪ繝ｬ繝ｳ繧ｸ濶ｲ */
   color: white;
 }
 #clock-btn.clock-active {
-  background-color: #c0392b; /* 赤色 */
+  background-color: #c0392b; /* 襍､濶ｲ */
 }
 .blinds-structure {
   width: 100%;
@@ -450,7 +450,7 @@ h2 {
   background-color: #dc3545;
 }
 
-/* ===== モーダルウィンドウ ===== */
+/* ===== 繝｢繝ｼ繝繝ｫ繧ｦ繧｣繝ｳ繝峨え ===== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -511,7 +511,7 @@ h2 {
   color: white;
 }
 
-/* ===== レンジファインダー ===== */
+/* ===== 繝ｬ繝ｳ繧ｸ繝輔ぃ繧､繝ｳ繝繝ｼ ===== */
 .range-finder-container {
   display: flex;
   gap: 20px;
@@ -731,7 +731,7 @@ h2 {
   transform: scale(0.98);
 }
 
-/* ===== テキサスホールデム ===== */
+/* ===== 繝く繧ｵ繧ｹ繝帙繝ｫ繝Β ===== */
 #texas-holdem #th-setup-screen {
   background-color: var(--primary-color);
   padding: 30px;
@@ -1079,7 +1079,7 @@ h2 {
     font-size: 4em;
   }
 }
-/* ===== テキサスホールデム カードアニメーション (修正版) ===== */
+/* ===== 繝く繧ｵ繧ｹ繝帙繝ｫ繝Β 繧ｫ繝ｼ繝峨い繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ (菫ｮ豁｣迚) ===== */
 #texas-holdem .community-cards-area .card {
   opacity: 0;
   transform: scale(0.8) rotateY(-90deg);
@@ -1090,7 +1090,7 @@ h2 {
   opacity: 1;
   transform: scale(1) rotateY(0deg);
 }
-/* ===== 用語集 カテゴリ見出し ===== */
+/* ===== 逕ｨ隱樣寔 繧ｫ繝ざ繝ｪ隕句縺 ===== */
 .glossary-category-title {
     color: var(--accent-color);
     margin-top: 30px;
@@ -1375,11 +1375,11 @@ h2 {
   line-height: 1.7;
 }
 .gtc-best-action {
-  color: #28a745; /* 緑色 */
+  color: #28a745; /* 邱題牡 */
   font-weight: bold;
 }
 .gtc-best-action-ev {
-  color: #28a745; /* 緑色 */
+  color: #28a745; /* 邱題牡 */
   font-size: 1.2em;
   font-weight: bold;
 }
@@ -1420,4 +1420,96 @@ h2 {
   to {
     transform: rotate(360deg);
   }
+}
+/* ===== GTC Calculator Tournament Fields ===== */
+.gtc-prize-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.gtc-prize-input-row label {
+    flex-basis: 50px; /* "1位:" のようなラベル幅 */
+    font-weight: normal;
+    color: #ccc;
+}
+.gtc-prize-input-row input {
+    flex-grow: 1;
+}
+.gtc-remove-prize-btn {
+    background-color: #6c757d;
+    border: 1px solid #6c757d;
+    color: var(--text-color);
+    padding: 8px 12px;
+    font-size: 0.9em;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.gtc-remove-prize-btn:hover {
+    background-color: #dc3545;
+}
+/* ===== GTC Analysis Details ===== */
+.analysis-details {
+    margin-top: 20px;
+}
+.analysis-details-section {
+    background-color: var(--surface-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    padding: 10px 15px;
+}
+.analysis-details-section summary {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: var(--accent-color);
+    cursor: pointer;
+    padding: 5px 0;
+}
+.analysis-details-section[open] > summary {
+    margin-bottom: 15px;
+}
+.analysis-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+.analysis-details-table th, .analysis-details-table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid var(--primary-color);
+}
+.analysis-details-table th {
+    background-color: var(--bg-color);
+    width: 30%;
+}
+.analysis-details-table.compact th, .analysis-details-table.compact td {
+    padding: 6px 8px;
+    font-size: 0.9em;
+}
+.range-display-list {
+    background-color: var(--bg-color);
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    word-break: break-all;
+    max-height: 100px;
+    overflow-y: auto;
+}
+.action-detail-box {
+    border: 1px solid var(--primary-color);
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+.action-detail-box.is-best {
+    border-color: #28a745;
+}
+.action-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--primary-color);
+    padding: 10px 15px;
+    font-size: 1.1em;
 }

@@ -111,6 +111,48 @@ const PokerUtils = (() => {
         return hands;
     }
 
+    function calculateICM(stacks, prizes) {
+        const totalChips = stacks.reduce((a, b) => a + b, 0);
+        if (totalChips <= 0) return stacks.map(() => 0);
+
+        const equities = new Array(stacks.length).fill(0);
+
+        // 再帰的に各順位の確率を計算するヘルパー関数
+        function recurse(currentStacks, currentPrizes, probability) {
+            const activePlayers = currentStacks.map((s, i) => ({ stack: s, index: i })).filter(p => p.stack > 0);
+            const totalChipsInRecurse = activePlayers.reduce((a, p) => a + p.stack, 0);
+
+            if (currentPrizes.length === 0 || activePlayers.length === 0 || totalChipsInRecurse <= 0) {
+                return;
+            }
+            
+            // プレイヤーが残り1人なら、残りの賞金を総取り
+            if (activePlayers.length === 1) {
+                equities[activePlayers[0].index] += currentPrizes.reduce((a, b) => a + b, 0) * probability;
+                return;
+            }
+            
+            const firstPrize = currentPrizes[0];
+            const remainingPrizes = currentPrizes.slice(1);
+
+            // 各プレイヤーが1位になる確率を計算し、再帰処理を呼び出す
+            for (const player of activePlayers) {
+                const winProbability = player.stack / totalChipsInRecurse;
+                equities[player.index] += firstPrize * probability * winProbability;
+                
+                // 1位になったプレイヤーを除いたスタックで次の順位を計算
+                if (remainingPrizes.length > 0) {
+                    const nextStacks = [...currentStacks];
+                    nextStacks[player.index] = 0; // 1位賞金を獲得したプレイヤーは計算から除く
+                    recurse(nextStacks, remainingPrizes, probability * winProbability);
+                }
+            }
+        }
+
+        recurse(stacks, prizes, 1.0);
+        return equities;
+    }
+
     return {
         RANKS,
         SUITS,
@@ -122,7 +164,8 @@ const PokerUtils = (() => {
         evaluateHand,
         compareHands,
         parseCard,
-        getAllHands
+        getAllHands,
+        calculateICM
     };
 })();
 
@@ -142,6 +185,9 @@ function initializeGtcCalculator() {
     const playersInfoContainer = document.getElementById('gtc-players-info');
     const boardCardsContainer = document.getElementById('gtc-board-cards');
     const historyRowsContainer = document.getElementById('gtc-history-rows');
+
+    const addPrizeBtn = document.getElementById('gtc-add-prize-btn');
+    const prizesContainer = document.getElementById('gtc-prizes-container');
 
     // Buttons
     const analyzeBtn = document.getElementById('gtc-analyze-btn');
@@ -256,6 +302,25 @@ function initializeGtcCalculator() {
             </div>`).join('');
     }
 
+    function addPrizeRow() {
+        const prizeCount = prizesContainer.children.length + 1;
+        const prizeRow = document.createElement('div');
+        prizeRow.className = 'gtc-prize-input-row';
+        prizeRow.innerHTML = `
+            <label>${prizeCount}位:</label>
+            <input type="number" class="gtc-prize-amount" placeholder="賞金額">
+            <button type="button" class="gtc-remove-prize-btn">×</button>
+        `;
+        prizesContainer.appendChild(prizeRow);
+        prizeRow.querySelector('.gtc-remove-prize-btn').addEventListener('click', () => {
+            prizeRow.remove();
+            // 順位ラベルを更新
+            prizesContainer.querySelectorAll('label').forEach((label, index) => {
+                label.textContent = `${index + 1}位:`;
+            });
+        });
+    }
+
     async function handleAnalyze() {
         analysisScreen.style.display = 'block';
         formView.style.display = 'none';
@@ -273,16 +338,24 @@ function initializeGtcCalculator() {
             assignInitialRanges(gameContext);
             // narrowRanges は現在簡略化されているため、処理時間はほぼゼロ
             narrowRanges(gameContext); 
-            const analysisData = calculateAllEVs(gameContext, userBetSize);
-            // --- 分析処理ここまで ---
-
+            
+            let rangeAdvantageInfo = null;
+            if (gameContext.board.length >= 3 && gameContext.players[0].range) {
+                 const opponents = gameContext.players.filter(p => p.id !== 'hero' && !p.isFolded);
+                 const combinedOpponentRange = Array.from(new Set(opponents.flatMap(opp => opp.range || [])));
+                 if(combinedOpponentRange.length > 0) {
+                    rangeAdvantageInfo = evaluateRangeAdvantage(gameContext.players[0].range, combinedOpponentRange, gameContext.board);
+                 }
+            }
+            const analysisData = calculateAllEVs(gameContext, userBetSize); // calculateAllEVs内で再計算されるが、結果表示用にここで保持
+            
             const elapsedTime = Date.now() - startTime;
             const remainingDelay = Math.max(0, MINIMUM_DELAY - elapsedTime);
 
             // 最低保証時間に達するまで待機
             await new Promise(resolve => setTimeout(resolve, remainingDelay));
             
-            renderResults(gameContext, analysisData);
+            renderResults(gameContext, analysisData, rangeAdvantageInfo);
 
         } catch (error) {
             console.error("Analysis Error:", error);
@@ -296,8 +369,19 @@ function initializeGtcCalculator() {
     // --- Analysis Pipeline Functions ---
     function buildGameContext() {
         const context = { players: [], board: [], actions: [] };
+        context.gameType = document.querySelector('input[name="gtc-game-type"]:checked').value;
         context.sb = parseFloat(document.getElementById('gtc-sb').value) || 0;
         context.bb = parseFloat(document.getElementById('gtc-bb').value) || 0;
+        
+        if (context.gameType === 'tournament') {
+            context.prizes = [];
+            prizesContainer.querySelectorAll('.gtc-prize-amount').forEach(input => {
+                const prize = parseFloat(input.value);
+                if (!isNaN(prize) && prize > 0) {
+                    context.prizes.push(prize);
+                }
+            });
+        }
 
         const playerCount = parseInt(playerCountSelect.value, 10);
         for (let i = 1; i <= playerCount; i++) {
@@ -442,12 +526,16 @@ function initializeGtcCalculator() {
         return 'エア'; // No pair, no real draw
     }
 
-    function generateActionCandidates(handCategory, isBetFacing, potSize, callAmount, userBetSize) {
+    function generateActionCandidates(handCategory, isBetFacing, potSize, callAmount, userBetSize, rangeAdvantageInfo) {
         const candidates = [];
-        const potBasedBets = [0.33, 0.5, 0.75, 1.0].map(m => ({ type: 'bet', amount: Math.round(potSize * m) }));
+        const potBasedBets = [
+            { type: 'bet', amount: Math.round(potSize * 0.33) }, // 33% Pot
+            { type: 'bet', amount: Math.round(potSize * 0.5) },  // 50% Pot
+            { type: 'bet', amount: Math.round(potSize * 0.75) }  // 75% Pot
+        ];
 
         if (isBetFacing) {
-            // Facing a bet
+            // (ベットに直面している場合のロジックは変更なし)
             candidates.push({ type: 'fold', amount: 0 });
             candidates.push({ type: 'call', amount: callAmount }); 
             if (handCategory === 'プレミアムメイドハンド' || handCategory === 'ドローハンド') {
@@ -456,34 +544,88 @@ function initializeGtcCalculator() {
                 candidates.push({ type: 'raise', amount: raiseAmount });
             }
         } else {
-            // Not facing a bet (checking or betting)
+            // ベットに直面していない場合（チェック or ベット）
             candidates.push({ type: 'check', amount: 0 });
+
+            const advantageScore = rangeAdvantageInfo ? rangeAdvantageInfo.advantageScore : 1.0;
+
+            // 1. レンジアドバンテージが非常に高い場合 (例: スコア > 1.8)
+            if (advantageScore > 1.8) {
+                // 非常に有利なボード。ハンドの強さに関わらず、小さいサイズのCベットを高頻度で行う戦略を推奨。
+                candidates.push(potBasedBets[0]); // 33% Pot Bet
+            }
+            // 2. レンジアドバンテージが中程度ある場合 (例: スコア > 1.2)
+            else if (advantageScore > 1.2) {
+                // やや有利なボード。メイドハンド、ドローハンド、そして一部のブラフでベットを推奨。
+                if (handCategory !== 'エア' || Math.random() < 0.4) { // 40%の確率でエアでもブラフ
+                    candidates.push(potBasedBets[1]); // 50% Pot Bet
+                }
+            }
+            
+            // 3. 従来のハンドの強さに基づくベット候補を追加
+            // レンジアドバンテージがない状況や、バリューベットの候補として機能する
             switch (handCategory) {
                 case 'プレミアムメイドハンド':
                 case 'ストロングメイドハンド':
-                    candidates.push(...potBasedBets.slice(1)); // Bet 50%, 75%, 100%
+                    candidates.push(potBasedBets[1], potBasedBets[2]); // Bet 50%, 75%
                     break;
                 case 'ミドルメイドハンド':
-                    candidates.push(potBasedBets[0], potBasedBets[1]); // Bet 33%, 50%
+                    candidates.push(potBasedBets[0]); // Bet 33%
                     break;
                 case 'ドローハンド':
-                case 'インサイドショット':
-                    candidates.push(potBasedBets[1], potBasedBets[2]); // Semi-bluff with 50%, 75%
-                    break;
-                case 'エア':
-                    candidates.push({ type: 'bet', amount: Math.round(potSize * 0.5) }); // A single bluff candidate
+                    candidates.push(potBasedBets[2]); // Semi-bluff with 75%
                     break;
             }
         }
         
-        // Add user-specified bet size if it's a betting situation
+        // ユーザー指定のベットサイズを追加
         if (!isBetFacing && userBetSize > 0) {
             candidates.push({ type: 'bet', amount: userBetSize });
         }
 
-        // Remove duplicate actions
+        // 重複を削除して返す
         const uniqueCandidates = Array.from(new Map(candidates.map(item => [`${item.type}_${item.amount}`, item])).values());
         return uniqueCandidates;
+    }
+
+    function evaluateRangeAdvantage(heroRange, opponentRange, board) {
+        // レンジに含まれる各ハンドが、特定の強さを持つ組み合わせの数を数える
+        const countHandStrength = (range) => {
+            let nutCombos = 0;      // ツーペア以上のナッツ級ハンド
+            let topPairCombos = 0;  // トップペア
+            let totalCombos = 0;
+
+            range.forEach(handNotation => {
+                const potentialHands = expandHandNotation(handNotation);
+                potentialHands.forEach(hand => {
+                    // ハンドがボードと重複していないかチェック
+                    if (hand.some(card => board.includes(card))) return;
+
+                    totalCombos++;
+                    const strength = getHandStrengthOnBoard(hand, board);
+
+                    if (strength.madeHand >= PokerUtils.HAND_RANK_ORDER.TWO_PAIR) {
+                        nutCombos++;
+                    } else if (strength.pairType === 'TOP_PAIR') {
+                        topPairCombos++;
+                    }
+                });
+            });
+            return { nutCombos, topPairCombos, totalCombos };
+        };
+
+        const heroStats = countHandStrength(heroRange);
+        const opponentStats = countHandStrength(opponentRange);
+
+        // ナッツ級ハンドの割合を比較してアドバンテージ指数を算出
+        // ヒーローのナッツ割合が相手より高ければ、指数は1.0より大きくなる
+        const heroNutAdvantage = (heroStats.nutCombos / heroStats.totalCombos) / (opponentStats.nutCombos / opponentStats.totalCombos || 0.001);
+
+        return {
+            heroNutPercentage: (heroStats.nutCombos / heroStats.totalCombos) * 100,
+            opponentNutPercentage: (opponentStats.nutCombos / opponentStats.totalCombos) * 100,
+            advantageScore: heroNutAdvantage // このスコアが1.0を大きく超えるとヒーロー有利
+        };
     }
 
     function calculateAllEVs(context, userBetSize) {
@@ -491,38 +633,122 @@ function initializeGtcCalculator() {
         const opponents = context.players.filter(p => p.id !== 'hero' && !p.isFolded);
         if (!hero || opponents.length === 0 || hero.hand.length < 2) return { results: {} };
 
-        // Multi-way: Combine opponent ranges into a pseudo-opponent
-        const combinedOpponentRange = Array.from(new Set(opponents.flatMap(opp => opp.range || [])));
-        const pseudoOpponent = { range: combinedOpponentRange };
+        let rangeAdvantageInfo = null;
+        if (context.board.length >= 3 && hero.range && opponents.every(o => o.range)) {
+            const combinedOpponentRange = Array.from(new Set(opponents.flatMap(opp => opp.range)));
+            rangeAdvantageInfo = evaluateRangeAdvantage(hero.range, combinedOpponentRange, context.board);
+        }
 
         const handCategory = categorizeHeroHand(hero.hand, context.board);
         const callAmount = getCallAmount(context);
         const isBetFacing = callAmount > 0;
-        const actionCandidates = generateActionCandidates(handCategory, isBetFacing, context.potSize, callAmount, userBetSize);
+        const actionCandidates = generateActionCandidates(handCategory, isBetFacing, context.potSize, callAmount, userBetSize, rangeAdvantageInfo);
 
         const results = {};
-        const equity = calculateEquity(hero.hand, pseudoOpponent.range, context.board);
+        const isTournament = context.gameType === 'tournament' && context.prizes && context.prizes.length > 0;
 
         for (const action of actionCandidates) {
-            if (action.type === 'fold') {
-                results['fold'] = { ev: 0, amount: 0 };
-            }
-            if (action.type === 'check') {
-                results['check'] = { ev: context.potSize * equity, amount: 0 };
-            }
-            if (action.type === 'call') {
-                // Correct pot calculation for call EV
-                const potAfterCall = context.potSize + callAmount;
-                results['call'] = { ev: (potAfterCall * equity) - callAmount, amount: callAmount };
-            }
-            if (action.type === 'bet' || action.type === 'raise') {
-                const evResult = calculateEvOfBet(context, action.amount, pseudoOpponent);
-                if (evResult) {
-                    results[`${action.type}_${action.amount}`] = { ev: evResult.totalEv, amount: action.amount };
+            const key = action.type === 'bet' || action.type === 'raise' ? `${action.type}_${action.amount}` : action.type;
+
+            if (isTournament) {
+                const ev = calculateDollarEV(context, action);
+                results[key] = { ev: ev, amount: action.amount, details: null };
+            } else {
+                // cEV calculation
+                const pseudoOpponent = { range: Array.from(new Set(opponents.flatMap(opp => opp.range || []))) };
+
+                if (action.type === 'bet' || action.type === 'raise') {
+                    const evResult = calculateEvOfBet(context, action.amount, pseudoOpponent);
+                    results[key] = {
+                        ev: evResult ? evResult.totalEv : 0,
+                        amount: action.amount,
+                        details: evResult ? evResult.details : null
+                    };
+                } else {
+                    const equity = calculateEquity(hero.hand, pseudoOpponent.range, context.board);
+                    let ev = 0;
+                    if (action.type === 'check') {
+                        ev = context.potSize * equity;
+                    } else if (action.type === 'call') {
+                        const potAfterCall = context.potSize + action.amount;
+                        ev = (potAfterCall * equity) - action.amount;
+                    }
+                    // foldのevはデフォルトで0
+                    results[key] = { ev: ev, amount: action.amount, details: null };
                 }
             }
         }
         return { results };
+    }
+
+    function calculateDollarEV(context, action) {
+        const hero = context.players.find(p => p.id === 'hero');
+        const heroIndex = context.players.indexOf(hero);
+        const opponents = context.players.filter(p => p.id !== 'hero' && !p.isFolded);
+        if (opponents.length === 0) return 0; // 相手がいない場合は計算不可
+
+        // 1. アクション前の$EVを計算
+        const initialStacks = context.players.map(p => p.stack + (p.totalBetInHand || 0) + (p.betsInStreet[calculateCurrentStreet(context.actions)] || 0) );
+        const initialEvs = PokerUtils.calculateICM(initialStacks, context.prizes);
+        const heroInitialEv = initialEvs[heroIndex];
+        
+        // アクションごとのスタック変動をシミュレート
+        let finalStacks;
+
+        switch (action.type) {
+            case 'fold':
+                // フォールドした場合、スタックは変わらないが、ポットは獲得できない
+                // 期待値は現状維持なので、Δ$EVは0
+                return 0; // 基準となるためEVは0とする
+
+            case 'check':
+                // チェックした場合、ポットサイズは変わらない。
+                // ショーダウンまで進んだと仮定し、エクイティに応じてポットを獲得する
+                finalStacks = [...initialStacks];
+                const equityVsAll = calculateEquity(hero.hand, opponents.flatMap(o => o.range), context.board);
+                finalStacks[heroIndex] += context.potSize * equityVsAll;
+                opponents.forEach(opp => {
+                    const oppIndex = context.players.indexOf(opp);
+                    finalStacks[oppIndex] += context.potSize * (1 - equityVsAll) / opponents.length;
+                });
+                break;
+
+            case 'call':
+            case 'bet':
+            case 'raise':
+                // 非常に簡易的なモデル：相手が50%の確率でフォールドし、50%でコールすると仮定
+                const foldProb = 0.5; 
+                const callProb = 0.5;
+
+                // a) 相手がフォールドした場合
+                const stacksAfterFold = [...initialStacks];
+                stacksAfterFold[heroIndex] += context.potSize; // ヒーローがポットを獲得
+
+                // b) 相手がコールした場合 (ショーダウン)
+                const stacksAfterCall = [...initialStacks];
+                const potAfterCall = context.potSize + action.amount * (opponents.length + 1);
+                const equityVsCallingRange = calculateEquity(hero.hand, opponents.flatMap(o => o.range), context.board);
+                
+                stacksAfterCall[heroIndex] += potAfterCall * equityVsCallingRange;
+                opponents.forEach(opp => {
+                     const oppIndex = context.players.indexOf(opp);
+                     stacksAfterCall[oppIndex] += potAfterCall * (1 - equityVsCallingRange) / opponents.length;
+                });
+
+                // 両ケースの$EVを計算して加重平均を取る
+                const evAfterFold = PokerUtils.calculateICM(stacksAfterFold, context.prizes)[heroIndex];
+                const evAfterCall = PokerUtils.calculateICM(stacksAfterCall, context.prizes)[heroIndex];
+                
+                const totalFinalEv = (evAfterFold * foldProb) + (evAfterCall * callProb);
+                return totalFinalEv - heroInitialEv; // 開始時からの$EVの変化量を返す
+        }
+        
+        if (finalStacks) {
+            const finalEvs = PokerUtils.calculateICM(finalStacks, context.prizes);
+            return finalEvs[heroIndex] - heroInitialEv;
+        }
+        
+        return 0; // 計算不可の場合は0
     }
 
     function calculateEvOfBet(context, betSize, opponent) {
@@ -551,19 +777,19 @@ function initializeGtcCalculator() {
         });
         
         const totalConsidered = opponent.range.length;
-        if (totalConsidered === 0) return { totalEv: potSize };
+        if (totalConsidered === 0) return { totalEv: potSize, details: {} }; // 詳細を追加
 
         const raiseProbability = raisingRange.length / totalConsidered;
         const callProbability = callingRange.length / totalConsidered;
         const foldProbability = Math.max(0, 1 - raiseProbability - callProbability);
 
-        // Calculate EV of each scenario
         const evWhenFolded = potSize;
-        const evWhenRaised = -betSize; // Simplified: assume we lose the bet if raised
+        const evWhenRaised = -betSize; 
         
         let evWhenCalled = 0;
+        let equityVsCallingRange = 0; // equityを初期化
         if (callProbability > 0) {
-            const equityVsCallingRange = calculateEquity(hero.hand, callingRange, board, 500); // Equity vs the range that just calls
+            equityVsCallingRange = calculateEquity(hero.hand, callingRange, board, 500);
             const potWhenCalled = potSize + betSize + betSize;
             evWhenCalled = (potWhenCalled * equityVsCallingRange) - betSize;
         }
@@ -572,97 +798,196 @@ function initializeGtcCalculator() {
                         (callProbability * evWhenCalled) + 
                         (raiseProbability * evWhenRaised);
         
-        return { totalEv };
+        return { 
+            totalEv,
+            details: {
+                foldProbability,
+                callProbability,
+                raiseProbability,
+                evWhenFolded,
+                evWhenCalled,
+                evWhenRaised,
+                equityVsCallingRange,
+                opponentRangeSize: totalConsidered,
+                opponentCallingRangeSize: callingRange.length,
+                opponentRaisingRangeSize: raisingRange.length
+            } 
+        };
     }
 
-    function renderResults(context, analysisData) {
+    function renderResults(context, analysisData, rangeAdvantageInfo) {
         const { results } = analysisData;
         if (!results || Object.keys(results).length === 0) {
             resultContent.innerHTML = `<p style="color: #ffc107;">分析できる有効なアクション候補がありません。状況設定を確認してください。</p>`;
             return;
         }
 
-        // --- 1. 必要な情報をすべて集める ---
+        const isTournament = context.gameType === 'tournament' && context.prizes && context.prizes.length > 0;
+        const evUnit = isTournament ? '$EV' : 'EV';
+        const evDescription = isTournament ? '賞金期待値' : '期待値';
 
-        // 最も期待値(EV)が高いアクションを見つける
+        const hero = context.players.find(p => p.id === 'hero');
+        const opponents = context.players.filter(p => p.id !== 'hero' && !p.isFolded);
+        const combinedOpponentRange = Array.from(new Set(opponents.flatMap(opp => opp.range || [])));
+
+        // 1. 最適アクションの決定
         const bestActionKey = Object.keys(results).reduce((a, b) => results[a].ev > results[b].ev ? a : b);
         const bestAction = results[bestActionKey];
-        
-        // 表示に必要な情報を変数に格納
-        const hero = context.players.find(p => p.id === 'hero');
-        const heroHand = hero.hand.join(', ');
-        const handCategory = categorizeHeroHand(hero.hand, context.board);
-
-        // アクションのタイプと金額を分かりやすい形式に変換
         const [actionType, actionAmountStr] = bestActionKey.split('_');
         const actionAmount = bestAction.amount;
         let formattedBestAction;
         if (actionType === 'bet' || actionType === 'raise') {
-            const potPercentage = context.potSize > 0 ? `(ポットの約${Math.round((actionAmount / context.potSize) * 100)}%)` : '';
-            formattedBestAction = `${actionType === 'bet' ? 'ベット' : 'レイズ'} (${actionAmount}) ${potPercentage}`;
+            formattedBestAction = `${actionType === 'bet' ? 'ベット' : 'レイズ'} (${actionAmount})`;
         } else {
             formattedBestAction = actionType === 'call' ? `コール (${actionAmount})` : actionType;
         }
 
-
-        // --- 2. 根拠（解説文）を動的に生成する ---
-
+        // 2. 根拠の生成
         let rationale = '';
-        switch (actionType) {
-            case 'bet':
-            case 'raise':
-                if (handCategory === 'プレミアムメイドハンド' || handCategory === 'ストロングメイドハンド') {
-                    rationale = `あなたのハンド(${heroHand})は「${handCategory}」に分類されます。相手のレンジにはコールが期待できるペアなどが十分に存在するため、価値を引き出すためのベット（バリューベット）が最適です。`;
-                } else if (handCategory === 'ドローハンド' || handCategory === 'インサイドショット') {
-                    rationale = `あなたのハンド(${heroHand})は強い役に発展する可能性を秘めた「${handCategory}」です。相手をフォールドさせること、そして役が完成した際に大きなポットを獲得することの両方を狙うベット（セミブラフ）が有効な選択肢となります。`;
-                } else {
-                    rationale = `あなたのハンド(${heroHand})は現状では弱いですが、相手のレンジがこのボードに合っていない可能性を考慮し、プレッシャーをかけるためのベット（ブラフ）が最も期待値が高いと判断しました。`;
-                }
-                break;
-            case 'call':
-                rationale = `相手のベットに対して、あなたのハンド(${heroHand})は勝っている可能性も十分にあり、ポットオッズも合っているため、コールして次のストリートを見にいくのが最も期待値が高いアクションです。`;
-                break;
-            case 'check':
-                 if (handCategory === 'ウィークメイドハンド' || handCategory === 'ミドルメイドハンド') {
-                    rationale = `あなたのハンド(${heroHand})は「${handCategory}」に分類され、一定の強さはありますが、相手からのベットには弱い状態です。ポットをコントロールし、安くショーダウンを目指すためにチェックするのが最適なアクションです。`;
-                } else {
-                     rationale = `あなたのハンド(${heroHand})で積極的にベットするメリットが少ないため、相手のアクションを見てから判断するためにチェックするのが堅実な選択です。`;
-                }
-                break;
-            case 'fold':
-                rationale = `相手のベットに対して、あなたのハンド(${heroHand})の勝率は極めて低く、コールに見合うポットオッズもありません。ここでは損失を最小限に抑えるためのフォールドが最適なアクションです。`;
-                break;
+        const handCategory = categorizeHeroHand(hero.hand, context.board);
+
+        if ((actionType === 'bet' || actionType === 'raise') &&
+            (handCategory === 'エア' || handCategory === 'インサイドショット') &&
+            rangeAdvantageInfo && rangeAdvantageInfo.advantageScore > 1.5) {
+            rationale = `あなたのハンド(${hero.hand.join(', ')})はボードにヒットしていませんが、このボードはプリフロップでのあなたのアクションと非常に相性が良く、相手のレンジに対して有利（**レンジアドバンテージ**）です。そのため、積極的にベット（Cベット）してポットを獲得しにいくブラフが、最も期待値の高いアクションとなります。`;
+        } else {
+            switch (actionType) {
+                case 'bet':
+                case 'raise':
+                    if (handCategory === 'プレミアムメイドハンド' || handCategory === 'ストロングメイドハンド') {
+                        rationale = `あなたのハンド(${hero.hand.join(', ')})は「${handCategory}」に分類されます。相手のレンジにはコールが期待できるペアなどが十分に存在するため、価値を引き出すためのベット（バリューベット）が最適です。`;
+                    } else if (handCategory === 'ドローハンド' || handCategory === 'インサイドショット') {
+                        rationale = `あなたのハンド(${hero.hand.join(', ')})は強い役に発展する可能性を秘めた「${handCategory}」です。相手をフォールドさせること、そして役が完成した際に大きなポットを獲得することの両方を狙うベット（セミブラフ）が有効な選択肢となります。`;
+                    } else {
+                        rationale = `あなたのハンド(${hero.hand.join(', ')})は現状では弱いですが、相手のレンジがこのボードに合っていない可能性を考慮し、プレッシャーをかけるためのベット（ブラフ）が最も期待値が高いと判断しました。`;
+                    }
+                    break;
+                case 'call':
+                    rationale = `相手のベットに対して、あなたのハンド(${hero.hand.join(', ')})は勝っている可能性も十分にあり、ポットオッズも合っているため、コールして次のストリートを見にいくのが最も期待値が高いアクションです。`;
+                    break;
+                case 'check':
+                    if (handCategory === 'ウィークメイドハンド' || handCategory === 'ミドルメイドハンド') {
+                        rationale = `あなたのハンド(${hero.hand.join(', ')})は「${handCategory}」に分類され、一定の強さはありますが、相手からのベットには弱い状態です。ポットをコントロールし、安くショーダウンを目指すためにチェックするのが最適なアクションです。`;
+                    } else {
+                        rationale = `あなたのハンド(${hero.hand.join(', ')})で積極的にベットするメリットが少ないため、相手のアクションを見てから判断するためにチェックするのが堅実な選択です。`;
+                    }
+                    break;
+                case 'fold':
+                    rationale = `相手のベットに対して、あなたのハンド(${hero.hand.join(', ')})の勝率は極めて低く、コールに見合うポットオッズもありません。ここでは損失を最小限に抑えるためのフォールドが最適なアクションです。`;
+                    break;
+            }
         }
-        
 
-        // --- 3. HTMLを組み立てる ---
-
+        // 3. HTMLの組み立て
         let html = `<h3>分析結果</h3>`;
-        
-        // 最適アクションとその根拠を表示
+
         html += `<div class="gtc-result-summary">
                     <p><strong>最適アクション:</strong> <span class="gtc-best-action">${formattedBestAction}</span></p>
-                    <p><strong>期待値 (EV):</strong> <span class="gtc-best-action-ev">${bestAction.ev.toFixed(2)}</span></p>
+                    <p><strong>${evDescription} (${evUnit}):</strong> <span class="gtc-best-action-ev">${bestAction.ev.toFixed(2)}</span></p>
                     <p><strong>根拠:</strong> ${rationale}</p>
                  </div><hr>`;
 
-        // すべてのアクション候補とそのEVを期待値の高い順にリスト表示
-        html += `<h4>各アクションの期待値(EV)</h4>
-                 <ul class="gtc-ev-list">`;
-        const sortedResults = Object.entries(results).sort(([,a],[,b]) => b.ev - a.ev);
+        // (以降の詳細分析HTML生成ロジックは変更なし)
+        html += `<div class="analysis-details">`;
 
-            for (const [key, value] of sortedResults) {
-                const [actionType, actionAmount] = key.split('_');
-                let formattedAction = key.replace('_', ' ');
-                if (actionType === 'bet') formattedAction = `ベット ${actionAmount}`;
-                else if (actionType === 'raise') formattedAction = `レイズ ${actionAmount}`;
-                else if (actionType === 'call') formattedAction = 'コール';
-                else if (actionType === 'check') formattedAction = 'チェック';
-                else if (actionType === 'fold') formattedAction = 'フォールド';
+        // --- 状況サマリー ---
+        html += `<details class="analysis-details-section">
+                    <summary>状況サマリー</summary>
+                    <table class="analysis-details-table">
+                        <tr><th>ボード</th><td>${context.board.join(' ')}</td></tr>
+                        <tr><th>ポットサイズ</th><td>${context.potSize}</td></tr>
+                        <tr><th>あなたのハンド</th><td>${hero.hand.join(' ')}</td></tr>
+                        <tr><th>あなたのスタック</th><td>${hero.stack}</td></tr>
+                    </table>
+                 </details>`;
+
+        // --- ハンド評価とエクイティ ---
+        const equity = calculateEquity(hero.hand, combinedOpponentRange, context.board);
+        html += `<details class="analysis-details-section">
+                    <summary>ハンド評価とエクイティ</summary>
+                    <table class="analysis-details-table">
+                        <tr><th>ハンド分類</th><td>${categorizeHeroHand(hero.hand, context.board)}</td></tr>
+                        <tr><th>対相手レンジ勝率</th><td>${(equity * 100).toFixed(2)} %</td></tr>
+                    </table>
+                 </details>`;
+
+        // --- レンジ分析 ---
+        if (hero.range && combinedOpponentRange.length > 0) {
+            html += `<details class="analysis-details-section">
+                        <summary>レンジ分析</summary>
+                        <h4>あなたの推定レンジ (${hero.range.length}通り)</h4>
+                        <div class="range-display-list">${hero.range.join(', ')}</div>
+                        <h4>相手の推定レンジ (${combinedOpponentRange.length}通り)</h4>
+                        <div class="range-display-list">${combinedOpponentRange.join(', ')}</div>
+                     </details>`;
+        }
         
-                html += `<li><span class="action-name">${formattedAction}</span> <span class="action-ev">${value.ev.toFixed(2)}</span> ${key === bestActionKey ? '🏆' : ''}</li>`;
-            }        html += `</ul>`;
+        // --- レンジアドバンテージ ---
+        if (rangeAdvantageInfo) {
+             html += `<details class="analysis-details-section">
+                        <summary>レンジアドバンテージ評価</summary>
+                        <table class="analysis-details-table">
+                            <tr><th></th><th>あなた</th><th>相手</th></tr>
+                            <tr><th>ナッツ級ハンドの割合</th><td>${rangeAdvantageInfo.heroNutPercentage.toFixed(2)}%</td><td>${rangeAdvantageInfo.opponentNutPercentage.toFixed(2)}%</td></tr>
+                            <tr><th>アドバンテージ指数</th><td colspan="2">${rangeAdvantageInfo.advantageScore.toFixed(2)} (1.0より大きいと有利)</td></tr>
+                        </table>
+                     </details>`;
+        }
+
+        // --- 各アクションの詳細分析 ---
+        const sortedResults = Object.entries(results).sort(([,a],[,b]) => b.ev - a.ev);
+        html += `<details class="analysis-details-section" open>
+                    <summary>各アクションの詳細分析</summary>`;
         
+        sortedResults.forEach(([key, value]) => {
+            const [type, amountStr] = key.split('_');
+            let formattedAction;
+            switch (type) {
+                case 'bet':
+                case 'raise':
+                    formattedAction = `${type === 'bet' ? 'ベット' : 'レイズ'} ${amountStr}`;
+                    break;
+                case 'call':
+                    formattedAction = `コール (${value.amount})`;
+                    break;
+                case 'check':
+                    formattedAction = 'チェック';
+                    break;
+                case 'fold':
+                    formattedAction = 'フォールド';
+                    break;
+                default:
+                    formattedAction = key;
+            }
+
+            html += `<div class="action-detail-box ${key === bestActionKey ? 'is-best' : ''}">
+                        <div class="action-detail-header">
+                            <strong>${formattedAction}</strong>
+                            <span>${evUnit}: ${value.ev.toFixed(2)} ${key === bestActionKey ? '🏆' : ''}</span>
+                        </div>`;
+
+            if (value.details) {
+                const d = value.details;
+                html += `<table class="analysis-details-table compact">
+                            <tr>
+                                <th>相手の反応予測</th>
+                                <td>フォールド: ${(d.foldProbability * 100).toFixed(1)}%</td>
+                                <td>コール: ${(d.callProbability * 100).toFixed(1)}%</td>
+                                <td>レイズ: ${(d.raiseProbability * 100).toFixed(1)}%</td>
+                            </tr>
+                            <tr>
+                                <th>シナリオ別EV</th>
+                                <td>vsFold: ${d.evWhenFolded.toFixed(2)}</td>
+                                <td>vsCall: ${d.evWhenCalled.toFixed(2)}</td>
+                                <td>vsRaise: ${d.evWhenRaised.toFixed(2)}</td>
+                            </tr>
+                         </table>`;
+            }
+            html += `</div>`;
+        });
+        html += `</details>`;
+
+        html += `</div>`; // .analysis-details
         resultContent.innerHTML = html;
     }
 
@@ -848,6 +1173,12 @@ function initializeGtcCalculator() {
         formView.style.display = 'block';
     });
     resetBtn.addEventListener('click', resetGtcForm);
+
+    addPrizeBtn.addEventListener('click', addPrizeRow);
+    // 初期状態で3位までの入力欄を生成
+    addPrizeRow();
+    addPrizeRow();
+    addPrizeRow();
 
     // Initial setup
 
