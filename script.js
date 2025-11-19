@@ -165,469 +165,57 @@ const PokerUtils = (() => {
         compareHands,
         parseCard,
         getAllHands,
-        calculateICM
+        calculateICM,
+
+        /**
+         * ハンド表記とブロッカーカードを基に、残っているコンボ数を計算する。
+         * @param {string} handNotation - "AKs", "QQ", "T9o" などのハンド表記。
+         * @param {string[]} blockers - ["As", "Kd", "Tc"] のようなブロッカーカードの配列。
+         * @returns {number} 残りのコンボ数。
+         */
+        countCombos(handNotation, blockers = []) {
+            const suits = ['s', 'h', 'd', 'c'];
+            const r1Str = handNotation[0];
+            const r2Str = handNotation[1];
+            const isPair = r1Str === r2Str;
+            const isSuited = handNotation.length === 3 && handNotation[2] === 's';
+            const blockersSet = new Set(blockers);
+
+            if (isPair) {
+                const remainingCards = suits.map(s => r1Str + s).filter(c => !blockersSet.has(c));
+                if (remainingCards.length < 2) return 0;
+                return (remainingCards.length * (remainingCards.length - 1)) / 2;
+            }
+
+            if (isSuited) {
+                let comboCount = 0;
+                for (const suit of suits) {
+                    if (!blockersSet.has(r1Str + suit) && !blockersSet.has(r2Str + suit)) {
+                        comboCount++;
+                    }
+                }
+                return comboCount;
+            }
+
+            // オフスートの場合
+            const r1Cards = suits.map(s => r1Str + s).filter(c => !blockersSet.has(c));
+            const r2Cards = suits.map(s => r2Str + s).filter(c => !blockersSet.has(c));
+            let comboCount = 0;
+            for (const c1 of r1Cards) {
+                for (const c2 of r2Cards) {
+                    if (c1[1] !== c2[1]) {
+                        comboCount++;
+                    }
+                }
+            }
+            return comboCount;
+        }
     };
 })();
 
-function initializeGtcCalculator() {
-    const gtcContainer = document.getElementById('gtc-calculator');
-    if (!gtcContainer) return;
-
-    // Views
-    const formView = document.getElementById('gtc-form-view');
-    const analysisScreen = document.getElementById('gtc-analysis-screen');
-    const resultView = document.getElementById('gtc-result-view');
-
-    // Form Elements
-    const gameTypeRadios = document.querySelectorAll('input[name="gtc-game-type"]');
-    const tournamentFields = document.getElementById('gtc-tournament-fields');
-    const playerCountSelect = document.getElementById('gtc-player-count');
-    const playersInfoContainer = document.getElementById('gtc-players-info');
-    const boardCardsContainer = document.getElementById('gtc-board-cards');
-    const historyRowsContainer = document.getElementById('gtc-history-rows');
-
-    const addPrizeBtn = document.getElementById('gtc-add-prize-btn');
-    const prizesContainer = document.getElementById('gtc-prizes-container');
-
-    // Buttons
-    const analyzeBtn = document.getElementById('gtc-analyze-btn');
-    const backBtn = document.getElementById('gtc-back-btn');
-    const resetBtn = document.getElementById('gtc-reset-btn');
-    const addActionBtn = document.getElementById('gtc-add-action-btn');
-
-    // Add Bet Size Input UI
-    const betSizeGroup = document.createElement('div');
-    betSizeGroup.className = 'gtc-input-group';
-    betSizeGroup.style.marginTop = '20px';
-    betSizeGroup.innerHTML = `
-        <label for="gtc-bet-size">評価したいベットサイズ (点):</label>
-        <input type="number" id="gtc-bet-size" placeholder="例: 300" value="100">
-    `;
-    analyzeBtn.parentNode.insertBefore(betSizeGroup, analyzeBtn);
-
+const GtcAnalysis = (() => {
+    // これらの関数は、UIから独立した純粋な分析ロジックであり、GTC CalculatorとTexas Hold'em AIの両方から利用される。
     
-    // Result Content
-    const resultContent = document.getElementById('gtc-result-content');
-
-    const POSITIONS = ["BTN", "SB", "BB", "UTG", "HJ", "CO"];
-    const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
-    const SUITS = { 's': '♠', 'h': '♥', 'd': '♦', 'c': '♣' };
-    const STREETS = { 'preflop': 'プリフロップ', 'flop': 'フロップ', 'turn': 'ターン', 'river': 'リバー' };
-    const ACTIONS = { 'folds': 'フォールド', 'checks': 'チェック', 'calls': 'コール', 'bets': 'ベット', 'raises': 'レイズ' };
-
-    function createCardInput(idPrefix) {
-        const rankSelect = `<select id="${idPrefix}-rank" class="gtc-rank-input"><option value="">-</option>${PokerUtils.RANKS.split('').map(r => `<option value="${r}">${r}</option>`).join('')}</select>`;
-        const suitSelect = `<select id="${idPrefix}-suit" class="gtc-suit-select"><option value="">-</option>${Object.entries(PokerUtils.SUITS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>`;
-        return `<div class="card-input">${rankSelect}${suitSelect}</div>`;
-    }
-
-    function generatePlayerForms() {
-        const count = parseInt(playerCountSelect.value, 10);
-        playersInfoContainer.innerHTML = '<h3>プレイヤー情報</h3>';
-        for (let i = 1; i <= count; i++) {
-            const isHero = i === 1;
-            const playerForm = document.createElement('div');
-            playerForm.className = 'gtc-player-form';
-            const handInputHTML = isHero ? `
-                <div class="gtc-input-group">
-                    <label>ハンド:</label>
-                    <div class="hand-inputs">
-                        ${createCardInput(`gtc-hand-${i}-c1`)}
-                        ${createCardInput(`gtc-hand-${i}-c2`)}
-                    </div>
-                </div>` : '';
-            playerForm.innerHTML = `
-                <h4>${isHero ? '自分 (Hero)' : 'プレイヤー ' + i}</h4>
-                <div class="gtc-player-inputs">
-                    <div class="gtc-input-group">
-                        <label for="gtc-pos-${i}">ポジション:</label>
-                        <select id="gtc-pos-${i}">${POSITIONS.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
-                    </div>
-                    <div class="gtc-input-group">
-                        <label for="gtc-stack-${i}">スタック:</label>
-                        <input type="number" id="gtc-stack-${i}" placeholder="Stack">
-                    </div>
-                </div>
-                ${handInputHTML}`;
-
-            playersInfoContainer.appendChild(playerForm);
-        }
-        // Refresh action rows to update player dropdowns
-        historyRowsContainer.innerHTML = '';
-        addActionRow();
-    }
-    
-    function addActionRow() {
-        const playerCount = parseInt(playerCountSelect.value, 10);
-        const actionRow = document.createElement('div');
-        actionRow.className = 'action-history-row';
-
-        let playerOptions = '<option value="hero">自分 (Hero)</option>';
-        for (let i = 2; i <= playerCount; i++) {
-            playerOptions += `<option value="player${i}">プレイヤー ${i}</option>`;
-        }
-
-        actionRow.innerHTML = `
-            <div class="gtc-action-group">
-                <label>ストリート</label>
-                <select class="gtc-action-street">${Object.entries(STREETS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
-            </div>
-            <div class="gtc-action-group">
-                <label>プレイヤー</label>
-                <select class="gtc-action-player">${playerOptions}</select>
-            </div>
-            <div class="gtc-action-group">
-                <label>アクション</label>
-                <select class="gtc-action-type">${Object.entries(ACTIONS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
-            </div>
-            <div class="gtc-action-group">
-                <label>額</label>
-                <input type="number" class="gtc-action-amount" placeholder="例: 100">
-            </div>
-            <button class="gtc-remove-action-btn">削除</button>
-        `;
-        historyRowsContainer.appendChild(actionRow);
-        
-        actionRow.querySelector('.gtc-remove-action-btn').addEventListener('click', () => {
-            actionRow.remove();
-        });
-    }
-
-    function generateBoardCards() {
-        const boardCardNames = ['Flop 1', 'Flop 2', 'Flop 3', 'Turn', 'River'];
-        boardCardsContainer.innerHTML = boardCardNames.map((name, i) => `
-            <div class="gtc-input-group">
-                <label>${name}</label>
-                ${createCardInput(`gtc-board-c${i+1}`)}
-            </div>`).join('');
-    }
-
-    function addPrizeRow() {
-        const prizeCount = prizesContainer.children.length + 1;
-        const prizeRow = document.createElement('div');
-        prizeRow.className = 'gtc-prize-input-row';
-        prizeRow.innerHTML = `
-            <label>${prizeCount}位:</label>
-            <input type="number" class="gtc-prize-amount" placeholder="賞金額">
-            <button type="button" class="gtc-remove-prize-btn">×</button>
-        `;
-        prizesContainer.appendChild(prizeRow);
-        prizeRow.querySelector('.gtc-remove-prize-btn').addEventListener('click', () => {
-            prizeRow.remove();
-            // 順位ラベルを更新
-            prizesContainer.querySelectorAll('label').forEach((label, index) => {
-                label.textContent = `${index + 1}位:`;
-            });
-        });
-    }
-
-    async function handleAnalyze() {
-        analysisScreen.style.display = 'block';
-        formView.style.display = 'none';
-        resultView.style.display = 'none';
-
-        // ★★★ 可変ロード時間のためのロジック ★★★
-        const startTime = Date.now();
-        const MINIMUM_DELAY = 1500; // 最低でも1.5秒はロード画面を見せる
-
-        try {
-            // --- 分析処理本体 ---
-            const gameContext = buildGameContext();
-            const userBetSize = parseFloat(document.getElementById('gtc-bet-size').value) || 0;
-            calculateDerivedContext(gameContext);
-            assignInitialRanges(gameContext);
-            // narrowRanges は現在簡略化されているため、処理時間はほぼゼロ
-            narrowRanges(gameContext); 
-            
-            let rangeAdvantageInfo = null;
-            if (gameContext.board.length >= 3 && gameContext.players[0].range) {
-                 const opponents = gameContext.players.filter(p => p.id !== 'hero' && !p.isFolded);
-                 const combinedOpponentRange = Array.from(new Set(opponents.flatMap(opp => opp.range || [])));
-                 if(combinedOpponentRange.length > 0) {
-                    rangeAdvantageInfo = evaluateRangeAdvantage(gameContext.players[0].range, combinedOpponentRange, gameContext.board);
-                 }
-            }
-            const analysisData = calculateAllEVs(gameContext, userBetSize); // calculateAllEVs内で再計算されるが、結果表示用にここで保持
-            
-            const elapsedTime = Date.now() - startTime;
-            const remainingDelay = Math.max(0, MINIMUM_DELAY - elapsedTime);
-
-            // 最低保証時間に達するまで待機
-            await new Promise(resolve => setTimeout(resolve, remainingDelay));
-            
-            renderResults(gameContext, analysisData, rangeAdvantageInfo);
-
-        } catch (error) {
-            console.error("Analysis Error:", error);
-            resultContent.innerHTML = `<p style="color: red;">分析中にエラーが発生しました。入力値やアクションの順序が正しいか確認してください。</p><pre>${error.stack}</pre>`;
-        } finally {
-            analysisScreen.style.display = 'none';
-            resultView.style.display = 'block';
-        }
-    }
-
-    // --- Analysis Pipeline Functions ---
-    function buildGameContext() {
-        const context = { players: [], board: [], actions: [] };
-        context.gameType = document.querySelector('input[name="gtc-game-type"]:checked').value;
-        context.sb = parseFloat(document.getElementById('gtc-sb').value) || 0;
-        context.bb = parseFloat(document.getElementById('gtc-bb').value) || 0;
-        
-        if (context.gameType === 'tournament') {
-            context.prizes = [];
-            prizesContainer.querySelectorAll('.gtc-prize-amount').forEach(input => {
-                const prize = parseFloat(input.value);
-                if (!isNaN(prize) && prize > 0) {
-                    context.prizes.push(prize);
-                }
-            });
-        }
-
-        const playerCount = parseInt(playerCountSelect.value, 10);
-        for (let i = 1; i <= playerCount; i++) {
-            const player = {
-                id: i === 1 ? 'hero' : `player${i}`,
-                position: document.getElementById(`gtc-pos-${i}`).value,
-                stack: parseFloat(document.getElementById(`gtc-stack-${i}`).value) || 0,
-                betsInStreet: { preflop: 0, flop: 0, turn: 0, river: 0 },
-                hand: []
-            };
-            if (i === 1) {
-                const r1 = document.getElementById('gtc-hand-1-c1-rank').value, s1 = document.getElementById('gtc-hand-1-c1-suit').value;
-                const r2 = document.getElementById('gtc-hand-1-c2-rank').value, s2 = document.getElementById('gtc-hand-1-c2-suit').value;
-                if (r1 && s1) player.hand.push(r1 + s1);
-                if (r2 && s2) player.hand.push(r2 + s2);
-            }
-            context.players.push(player);
-        }
-
-        for (let i = 1; i <= 5; i++) {
-            const rank = document.getElementById(`gtc-board-c${i}-rank`).value, suit = document.getElementById(`gtc-board-c${i}-suit`).value;
-            if (rank && suit) context.board.push(rank + suit);
-        }
-
-        historyRowsContainer.querySelectorAll('.action-history-row').forEach(row => {
-            context.actions.push({
-                street: row.querySelector('.gtc-action-street').value,
-                player: row.querySelector('.gtc-action-player').value,
-                type: row.querySelector('.gtc-action-type').value,
-                amount: parseFloat(row.querySelector('.gtc-action-amount').value) || 0
-            });
-        });
-        return context;
-    }
-
-    function calculateDerivedContext(context) {
-        // プレイヤーの状態をリセット
-        context.players.forEach(p => {
-            p.betsInStreet = { preflop: 0, flop: 0, turn: 0, river: 0 };
-            p.totalBetInHand = 0; // ハンド全体での投資額
-            p.isFolded = false;
-        });
-
-        let totalPot = 0;
-
-        // 1. ブラインド処理
-        const sbPlayer = context.players.find(p => p.position === 'SB');
-        const bbPlayer = context.players.find(p => p.position === 'BB');
-        if (sbPlayer) {
-            sbPlayer.betsInStreet.preflop = Math.min(sbPlayer.stack, context.sb);
-        }
-        if (bbPlayer) {
-            bbPlayer.betsInStreet.preflop = Math.min(bbPlayer.stack, context.bb);
-        }
-
-        let lastStreet = 'preflop';
-        let highestBetOnStreet = context.bb;
-
-        // 2. アクションを時系列で処理
-        context.actions.forEach(action => {
-            const player = context.players.find(p => p.id === action.player);
-            if (!player || player.isFolded) return;
-
-            // ストリートが変わったら、前のストリートのベットをポットに集める
-            if (action.street !== lastStreet) {
-                context.players.forEach(p => {
-                    totalPot += p.betsInStreet[lastStreet];
-                    p.totalBetInHand += p.betsInStreet[lastStreet];
-                    p.betsInStreet[lastStreet] = 0; // リセット
-                });
-                highestBetOnStreet = 0;
-                lastStreet = action.street;
-            }
-
-            // アクションを処理
-            const currentBet = player.betsInStreet[action.street];
-            switch (action.type) {
-                case 'folds':
-                    player.isFolded = true;
-                    break;
-                case 'calls':
-                    const callAmount = highestBetOnStreet - currentBet;
-                    player.betsInStreet[action.street] += callAmount;
-                    break;
-                case 'bets':
-                case 'raises':
-                    highestBetOnStreet = action.amount;
-                    player.betsInStreet[action.street] = action.amount;
-                    break;
-            }
-        });
-
-        // 3. 現在のストリートのベット額をポットに加算
-        let currentStreetBets = 0;
-        context.players.forEach(p => {
-            if (!p.isFolded) {
-                currentStreetBets += p.betsInStreet[lastStreet];
-            } else {
-                // フォールドしたプレイヤーのチップもポットに含める
-                totalPot += p.betsInStreet[lastStreet];
-            }
-        });
-        
-        context.potSize = totalPot + currentStreetBets;
-    }
-
-    function categorizeHeroHand(heroHand, board) {
-        const strength = getHandStrengthOnBoard(heroHand, board);
-        const handRank = strength.madeHand;
-        const heroCards = heroHand.map(c => PokerUtils.parseCard(c));
-        const boardCards = board.map(c => PokerUtils.parseCard(c));
-
-        // TPTK Check
-        if (strength.pairType === 'TOP_PAIR') {
-            const boardHighRank = Math.max(...boardCards.map(c => c.rank));
-            const heroRanks = heroCards.map(c => c.rank);
-            // Find which hero card is the kicker
-            const kickerRank = heroRanks.find(r => r !== boardHighRank);
-            if (kickerRank === 14) { // Ace kicker is TPTK
-                 return 'ストロングメイドハンド'; // Treat TPTK as a strong made hand
-            }
-        }
-        
-        if (handRank >= PokerUtils.HAND_RANK_ORDER.STRAIGHT) {
-            return 'プレミアムメイドハンド'; // Straight or better
-        }
-        if (handRank === PokerUtils.HAND_RANK_ORDER.TWO_PAIR || handRank === PokerUtils.HAND_RANK_ORDER.THREE_OF_A_KIND) {
-            return 'ストロングメイドハンド'; // Two Pair, Three of a Kind
-        }
-        if (strength.pairType === 'TOP_PAIR' || strength.pairType === 'OVER_PAIR') {
-            return 'ミドルメイドハンド'; // Non-TPTK Top Pair, Over Pair
-        }
-        if (handRank === PokerUtils.HAND_RANK_ORDER.ONE_PAIR) {
-            return 'ウィークメイドハンド'; // Middle or Weak Pair
-        }
-        if (strength.isFlushDraw || strength.isOpenEnded) {
-            return 'ドローハンド'; // Strong draws
-        }
-        if (strength.isGutshot) {
-            return 'インサイドショット'; // Weaker draws
-        }
-        return 'エア'; // No pair, no real draw
-    }
-
-    function generateActionCandidates(handCategory, isBetFacing, potSize, callAmount, userBetSize, rangeAdvantageInfo) {
-        const candidates = [];
-        const potBasedBets = [
-            { type: 'bet', amount: Math.round(potSize * 0.33) }, // 33% Pot
-            { type: 'bet', amount: Math.round(potSize * 0.5) },  // 50% Pot
-            { type: 'bet', amount: Math.round(potSize * 0.75) }  // 75% Pot
-        ];
-
-        if (isBetFacing) {
-            // (ベットに直面している場合のロジックは変更なし)
-            candidates.push({ type: 'fold', amount: 0 });
-            candidates.push({ type: 'call', amount: callAmount }); 
-            if (handCategory === 'プレミアムメイドハンド' || handCategory === 'ドローハンド') {
-                // Standard raise size is ~3x the bet facing.
-                const raiseAmount = callAmount * 3;
-                candidates.push({ type: 'raise', amount: raiseAmount });
-            }
-        } else {
-            // ベットに直面していない場合（チェック or ベット）
-            candidates.push({ type: 'check', amount: 0 });
-
-            const advantageScore = rangeAdvantageInfo ? rangeAdvantageInfo.advantageScore : 1.0;
-
-            // 1. レンジアドバンテージが非常に高い場合 (例: スコア > 1.8)
-            if (advantageScore > 1.8) {
-                // 非常に有利なボード。ハンドの強さに関わらず、小さいサイズのCベットを高頻度で行う戦略を推奨。
-                candidates.push(potBasedBets[0]); // 33% Pot Bet
-            }
-            // 2. レンジアドバンテージが中程度ある場合 (例: スコア > 1.2)
-            else if (advantageScore > 1.2) {
-                // やや有利なボード。メイドハンド、ドローハンド、そして一部のブラフでベットを推奨。
-                if (handCategory !== 'エア' || Math.random() < 0.4) { // 40%の確率でエアでもブラフ
-                    candidates.push(potBasedBets[1]); // 50% Pot Bet
-                }
-            }
-            
-            // 3. 従来のハンドの強さに基づくベット候補を追加
-            // レンジアドバンテージがない状況や、バリューベットの候補として機能する
-            switch (handCategory) {
-                case 'プレミアムメイドハンド':
-                case 'ストロングメイドハンド':
-                    candidates.push(potBasedBets[1], potBasedBets[2]); // Bet 50%, 75%
-                    break;
-                case 'ミドルメイドハンド':
-                    candidates.push(potBasedBets[0]); // Bet 33%
-                    break;
-                case 'ドローハンド':
-                    candidates.push(potBasedBets[2]); // Semi-bluff with 75%
-                    break;
-            }
-        }
-        
-        // ユーザー指定のベットサイズを追加
-        if (!isBetFacing && userBetSize > 0) {
-            candidates.push({ type: 'bet', amount: userBetSize });
-        }
-
-        // 重複を削除して返す
-        const uniqueCandidates = Array.from(new Map(candidates.map(item => [`${item.type}_${item.amount}`, item])).values());
-        return uniqueCandidates;
-    }
-
-    function evaluateRangeAdvantage(heroRange, opponentRange, board) {
-        // レンジに含まれる各ハンドが、特定の強さを持つ組み合わせの数を数える
-        const countHandStrength = (range) => {
-            let nutCombos = 0;      // ツーペア以上のナッツ級ハンド
-            let topPairCombos = 0;  // トップペア
-            let totalCombos = 0;
-
-            range.forEach(handNotation => {
-                const potentialHands = expandHandNotation(handNotation);
-                potentialHands.forEach(hand => {
-                    // ハンドがボードと重複していないかチェック
-                    if (hand.some(card => board.includes(card))) return;
-
-                    totalCombos++;
-                    const strength = getHandStrengthOnBoard(hand, board);
-
-                    if (strength.madeHand >= PokerUtils.HAND_RANK_ORDER.TWO_PAIR) {
-                        nutCombos++;
-                    } else if (strength.pairType === 'TOP_PAIR') {
-                        topPairCombos++;
-                    }
-                });
-            });
-            return { nutCombos, topPairCombos, totalCombos };
-        };
-
-        const heroStats = countHandStrength(heroRange);
-        const opponentStats = countHandStrength(opponentRange);
-
-        // ナッツ級ハンドの割合を比較してアドバンテージ指数を算出
-        // ヒーローのナッツ割合が相手より高ければ、指数は1.0より大きくなる
-        const heroNutAdvantage = (heroStats.nutCombos / heroStats.totalCombos) / (opponentStats.nutCombos / opponentStats.totalCombos || 0.001);
-
-        return {
-            heroNutPercentage: (heroStats.nutCombos / heroStats.totalCombos) * 100,
-            opponentNutPercentage: (opponentStats.nutCombos / opponentStats.totalCombos) * 100,
-            advantageScore: heroNutAdvantage // このスコアが1.0を大きく超えるとヒーロー有利
-        };
-    }
-
     function calculateAllEVs(context, userBetSize) {
         const hero = context.players.find(p => p.id === 'hero');
         const opponents = context.players.filter(p => p.id !== 'hero' && !p.isFolded);
@@ -681,319 +269,6 @@ function initializeGtcCalculator() {
         return { results };
     }
 
-    function calculateDollarEV(context, action) {
-        const hero = context.players.find(p => p.id === 'hero');
-        const heroIndex = context.players.indexOf(hero);
-        const opponents = context.players.filter(p => p.id !== 'hero' && !p.isFolded);
-        if (opponents.length === 0) return 0; // 相手がいない場合は計算不可
-
-        // 1. アクション前の$EVを計算
-        const initialStacks = context.players.map(p => p.stack + (p.totalBetInHand || 0) + (p.betsInStreet[calculateCurrentStreet(context.actions)] || 0) );
-        const initialEvs = PokerUtils.calculateICM(initialStacks, context.prizes);
-        const heroInitialEv = initialEvs[heroIndex];
-        
-        // アクションごとのスタック変動をシミュレート
-        let finalStacks;
-
-        switch (action.type) {
-            case 'fold':
-                // フォールドした場合、スタックは変わらないが、ポットは獲得できない
-                // 期待値は現状維持なので、Δ$EVは0
-                return 0; // 基準となるためEVは0とする
-
-            case 'check':
-                // チェックした場合、ポットサイズは変わらない。
-                // ショーダウンまで進んだと仮定し、エクイティに応じてポットを獲得する
-                finalStacks = [...initialStacks];
-                const equityVsAll = calculateEquity(hero.hand, opponents.flatMap(o => o.range), context.board);
-                finalStacks[heroIndex] += context.potSize * equityVsAll;
-                opponents.forEach(opp => {
-                    const oppIndex = context.players.indexOf(opp);
-                    finalStacks[oppIndex] += context.potSize * (1 - equityVsAll) / opponents.length;
-                });
-                break;
-
-            case 'call':
-            case 'bet':
-            case 'raise':
-                // 非常に簡易的なモデル：相手が50%の確率でフォールドし、50%でコールすると仮定
-                const foldProb = 0.5; 
-                const callProb = 0.5;
-
-                // a) 相手がフォールドした場合
-                const stacksAfterFold = [...initialStacks];
-                stacksAfterFold[heroIndex] += context.potSize; // ヒーローがポットを獲得
-
-                // b) 相手がコールした場合 (ショーダウン)
-                const stacksAfterCall = [...initialStacks];
-                const potAfterCall = context.potSize + action.amount * (opponents.length + 1);
-                const equityVsCallingRange = calculateEquity(hero.hand, opponents.flatMap(o => o.range), context.board);
-                
-                stacksAfterCall[heroIndex] += potAfterCall * equityVsCallingRange;
-                opponents.forEach(opp => {
-                     const oppIndex = context.players.indexOf(opp);
-                     stacksAfterCall[oppIndex] += potAfterCall * (1 - equityVsCallingRange) / opponents.length;
-                });
-
-                // 両ケースの$EVを計算して加重平均を取る
-                const evAfterFold = PokerUtils.calculateICM(stacksAfterFold, context.prizes)[heroIndex];
-                const evAfterCall = PokerUtils.calculateICM(stacksAfterCall, context.prizes)[heroIndex];
-                
-                const totalFinalEv = (evAfterFold * foldProb) + (evAfterCall * callProb);
-                return totalFinalEv - heroInitialEv; // 開始時からの$EVの変化量を返す
-        }
-        
-        if (finalStacks) {
-            const finalEvs = PokerUtils.calculateICM(finalStacks, context.prizes);
-            return finalEvs[heroIndex] - heroInitialEv;
-        }
-        
-        return 0; // 計算不可の場合は0
-    }
-
-    function calculateEvOfBet(context, betSize, opponent) {
-        const { board, potSize } = context;
-        const hero = context.players.find(p => p.id === 'hero');
-        if (!hero || !opponent.range || opponent.range.length === 0) return null;
-
-        const raisingRange = [];
-        const callingRange = [];
-
-        // Heuristics-based range categorization
-        opponent.range.forEach(handNotation => {
-            const hand = expandHandNotation(handNotation)[0];
-            if (!hand || hand.some(card => board.includes(card) || hero.hand.includes(card))) return;
-
-            const strength = getHandStrengthOnBoard(hand, board);
-
-            // Raising Range: Strong hands (Two Pair or better)
-            if (strength.madeHand >= PokerUtils.HAND_RANK_ORDER.TWO_PAIR) {
-                raisingRange.push(handNotation);
-            } 
-            // Calling Range: Medium hands (pairs) and draws
-            else if (strength.madeHand >= PokerUtils.HAND_RANK_ORDER.ONE_PAIR || strength.isFlushDraw || strength.isOpenEnded) {
-                callingRange.push(handNotation);
-            }
-        });
-        
-        const totalConsidered = opponent.range.length;
-        if (totalConsidered === 0) return { totalEv: potSize, details: {} }; // 詳細を追加
-
-        const raiseProbability = raisingRange.length / totalConsidered;
-        const callProbability = callingRange.length / totalConsidered;
-        const foldProbability = Math.max(0, 1 - raiseProbability - callProbability);
-
-        const evWhenFolded = potSize;
-        const evWhenRaised = -betSize; 
-        
-        let evWhenCalled = 0;
-        let equityVsCallingRange = 0; // equityを初期化
-        if (callProbability > 0) {
-            equityVsCallingRange = calculateEquity(hero.hand, callingRange, board, 500);
-            const potWhenCalled = potSize + betSize + betSize;
-            evWhenCalled = (potWhenCalled * equityVsCallingRange) - betSize;
-        }
-
-        const totalEv = (foldProbability * evWhenFolded) + 
-                        (callProbability * evWhenCalled) + 
-                        (raiseProbability * evWhenRaised);
-        
-        return { 
-            totalEv,
-            details: {
-                foldProbability,
-                callProbability,
-                raiseProbability,
-                evWhenFolded,
-                evWhenCalled,
-                evWhenRaised,
-                equityVsCallingRange,
-                opponentRangeSize: totalConsidered,
-                opponentCallingRangeSize: callingRange.length,
-                opponentRaisingRangeSize: raisingRange.length
-            } 
-        };
-    }
-
-    function renderResults(context, analysisData, rangeAdvantageInfo) {
-        const { results } = analysisData;
-        if (!results || Object.keys(results).length === 0) {
-            resultContent.innerHTML = `<p style="color: #ffc107;">分析できる有効なアクション候補がありません。状況設定を確認してください。</p>`;
-            return;
-        }
-
-        const isTournament = context.gameType === 'tournament' && context.prizes && context.prizes.length > 0;
-        const evUnit = isTournament ? '$EV' : 'EV';
-        const evDescription = isTournament ? '賞金期待値' : '期待値';
-
-        const hero = context.players.find(p => p.id === 'hero');
-        const opponents = context.players.filter(p => p.id !== 'hero' && !p.isFolded);
-        const combinedOpponentRange = Array.from(new Set(opponents.flatMap(opp => opp.range || [])));
-
-        // 1. 最適アクションの決定
-        const bestActionKey = Object.keys(results).reduce((a, b) => results[a].ev > results[b].ev ? a : b);
-        const bestAction = results[bestActionKey];
-        const [actionType, actionAmountStr] = bestActionKey.split('_');
-        const actionAmount = bestAction.amount;
-        let formattedBestAction;
-        if (actionType === 'bet' || actionType === 'raise') {
-            formattedBestAction = `${actionType === 'bet' ? 'ベット' : 'レイズ'} (${actionAmount})`;
-        } else {
-            formattedBestAction = actionType === 'call' ? `コール (${actionAmount})` : actionType;
-        }
-
-        // 2. 根拠の生成
-        let rationale = '';
-        const handCategory = categorizeHeroHand(hero.hand, context.board);
-
-        if ((actionType === 'bet' || actionType === 'raise') &&
-            (handCategory === 'エア' || handCategory === 'インサイドショット') &&
-            rangeAdvantageInfo && rangeAdvantageInfo.advantageScore > 1.5) {
-            rationale = `あなたのハンド(${hero.hand.join(', ')})はボードにヒットしていませんが、このボードはプリフロップでのあなたのアクションと非常に相性が良く、相手のレンジに対して有利（**レンジアドバンテージ**）です。そのため、積極的にベット（Cベット）してポットを獲得しにいくブラフが、最も期待値の高いアクションとなります。`;
-        } else {
-            switch (actionType) {
-                case 'bet':
-                case 'raise':
-                    if (handCategory === 'プレミアムメイドハンド' || handCategory === 'ストロングメイドハンド') {
-                        rationale = `あなたのハンド(${hero.hand.join(', ')})は「${handCategory}」に分類されます。相手のレンジにはコールが期待できるペアなどが十分に存在するため、価値を引き出すためのベット（バリューベット）が最適です。`;
-                    } else if (handCategory === 'ドローハンド' || handCategory === 'インサイドショット') {
-                        rationale = `あなたのハンド(${hero.hand.join(', ')})は強い役に発展する可能性を秘めた「${handCategory}」です。相手をフォールドさせること、そして役が完成した際に大きなポットを獲得することの両方を狙うベット（セミブラフ）が有効な選択肢となります。`;
-                    } else {
-                        rationale = `あなたのハンド(${hero.hand.join(', ')})は現状では弱いですが、相手のレンジがこのボードに合っていない可能性を考慮し、プレッシャーをかけるためのベット（ブラフ）が最も期待値が高いと判断しました。`;
-                    }
-                    break;
-                case 'call':
-                    rationale = `相手のベットに対して、あなたのハンド(${hero.hand.join(', ')})は勝っている可能性も十分にあり、ポットオッズも合っているため、コールして次のストリートを見にいくのが最も期待値が高いアクションです。`;
-                    break;
-                case 'check':
-                    if (handCategory === 'ウィークメイドハンド' || handCategory === 'ミドルメイドハンド') {
-                        rationale = `あなたのハンド(${hero.hand.join(', ')})は「${handCategory}」に分類され、一定の強さはありますが、相手からのベットには弱い状態です。ポットをコントロールし、安くショーダウンを目指すためにチェックするのが最適なアクションです。`;
-                    } else {
-                        rationale = `あなたのハンド(${hero.hand.join(', ')})で積極的にベットするメリットが少ないため、相手のアクションを見てから判断するためにチェックするのが堅実な選択です。`;
-                    }
-                    break;
-                case 'fold':
-                    rationale = `相手のベットに対して、あなたのハンド(${hero.hand.join(', ')})の勝率は極めて低く、コールに見合うポットオッズもありません。ここでは損失を最小限に抑えるためのフォールドが最適なアクションです。`;
-                    break;
-            }
-        }
-
-        // 3. HTMLの組み立て
-        let html = `<h3>分析結果</h3>`;
-
-        html += `<div class="gtc-result-summary">
-                    <p><strong>最適アクション:</strong> <span class="gtc-best-action">${formattedBestAction}</span></p>
-                    <p><strong>${evDescription} (${evUnit}):</strong> <span class="gtc-best-action-ev">${bestAction.ev.toFixed(2)}</span></p>
-                    <p><strong>根拠:</strong> ${rationale}</p>
-                 </div><hr>`;
-
-        // (以降の詳細分析HTML生成ロジックは変更なし)
-        html += `<div class="analysis-details">`;
-
-        // --- 状況サマリー ---
-        html += `<details class="analysis-details-section">
-                    <summary>状況サマリー</summary>
-                    <table class="analysis-details-table">
-                        <tr><th>ボード</th><td>${context.board.join(' ')}</td></tr>
-                        <tr><th>ポットサイズ</th><td>${context.potSize}</td></tr>
-                        <tr><th>あなたのハンド</th><td>${hero.hand.join(' ')}</td></tr>
-                        <tr><th>あなたのスタック</th><td>${hero.stack}</td></tr>
-                    </table>
-                 </details>`;
-
-        // --- ハンド評価とエクイティ ---
-        const equity = calculateEquity(hero.hand, combinedOpponentRange, context.board);
-        html += `<details class="analysis-details-section">
-                    <summary>ハンド評価とエクイティ</summary>
-                    <table class="analysis-details-table">
-                        <tr><th>ハンド分類</th><td>${categorizeHeroHand(hero.hand, context.board)}</td></tr>
-                        <tr><th>対相手レンジ勝率</th><td>${(equity * 100).toFixed(2)} %</td></tr>
-                    </table>
-                 </details>`;
-
-        // --- レンジ分析 ---
-        if (hero.range && combinedOpponentRange.length > 0) {
-            html += `<details class="analysis-details-section">
-                        <summary>レンジ分析</summary>
-                        <h4>あなたの推定レンジ (${hero.range.length}通り)</h4>
-                        <div class="range-display-list">${hero.range.join(', ')}</div>
-                        <h4>相手の推定レンジ (${combinedOpponentRange.length}通り)</h4>
-                        <div class="range-display-list">${combinedOpponentRange.join(', ')}</div>
-                     </details>`;
-        }
-        
-        // --- レンジアドバンテージ ---
-        if (rangeAdvantageInfo) {
-             html += `<details class="analysis-details-section">
-                        <summary>レンジアドバンテージ評価</summary>
-                        <table class="analysis-details-table">
-                            <tr><th></th><th>あなた</th><th>相手</th></tr>
-                            <tr><th>ナッツ級ハンドの割合</th><td>${rangeAdvantageInfo.heroNutPercentage.toFixed(2)}%</td><td>${rangeAdvantageInfo.opponentNutPercentage.toFixed(2)}%</td></tr>
-                            <tr><th>アドバンテージ指数</th><td colspan="2">${rangeAdvantageInfo.advantageScore.toFixed(2)} (1.0より大きいと有利)</td></tr>
-                        </table>
-                     </details>`;
-        }
-
-        // --- 各アクションの詳細分析 ---
-        const sortedResults = Object.entries(results).sort(([,a],[,b]) => b.ev - a.ev);
-        html += `<details class="analysis-details-section" open>
-                    <summary>各アクションの詳細分析</summary>`;
-        
-        sortedResults.forEach(([key, value]) => {
-            const [type, amountStr] = key.split('_');
-            let formattedAction;
-            switch (type) {
-                case 'bet':
-                case 'raise':
-                    formattedAction = `${type === 'bet' ? 'ベット' : 'レイズ'} ${amountStr}`;
-                    break;
-                case 'call':
-                    formattedAction = `コール (${value.amount})`;
-                    break;
-                case 'check':
-                    formattedAction = 'チェック';
-                    break;
-                case 'fold':
-                    formattedAction = 'フォールド';
-                    break;
-                default:
-                    formattedAction = key;
-            }
-
-            html += `<div class="action-detail-box ${key === bestActionKey ? 'is-best' : ''}">
-                        <div class="action-detail-header">
-                            <strong>${formattedAction}</strong>
-                            <span>${evUnit}: ${value.ev.toFixed(2)} ${key === bestActionKey ? '🏆' : ''}</span>
-                        </div>`;
-
-            if (value.details) {
-                const d = value.details;
-                html += `<table class="analysis-details-table compact">
-                            <tr>
-                                <th>相手の反応予測</th>
-                                <td>フォールド: ${(d.foldProbability * 100).toFixed(1)}%</td>
-                                <td>コール: ${(d.callProbability * 100).toFixed(1)}%</td>
-                                <td>レイズ: ${(d.raiseProbability * 100).toFixed(1)}%</td>
-                            </tr>
-                            <tr>
-                                <th>シナリオ別EV</th>
-                                <td>vsFold: ${d.evWhenFolded.toFixed(2)}</td>
-                                <td>vsCall: ${d.evWhenCalled.toFixed(2)}</td>
-                                <td>vsRaise: ${d.evWhenRaised.toFixed(2)}</td>
-                            </tr>
-                         </table>`;
-            }
-            html += `</div>`;
-        });
-        html += `</details>`;
-
-        html += `</div>`; // .analysis-details
-        resultContent.innerHTML = html;
-    }
-
-    // --- Calculation Helpers ---
-    function calculateCurrentStreet(actions) { return actions.length > 0 ? actions[actions.length - 1].street : 'preflop'; }
-
     function getCallAmount(context) {
         const hero = context.players.find(p => p.id === 'hero');
         if (!hero) return 0;
@@ -1003,58 +278,231 @@ function initializeGtcCalculator() {
         return Math.max(0, highestBetOnStreet - heroBetOnStreet);
     }
 
-    function assignInitialRanges(context) {
-        const { players, actions, sb, bb } = context;
-        players.forEach(p => p.range = PokerUtils.getAllHands());
-        const preflopActions = actions.filter(a => a.street === 'preflop');
-        const openRaiserAction = preflopActions.find(a => a.type === 'raises');
-        if (!openRaiserAction) return;
-
-        const stackInBB = Math.min(...players.map(p => p.stack)) / bb;
-        const stackCategory = stackInBB >= 50 ? '100bb' : '20bb';
-        const playerCountCategory = players.length > 2 ? '6max' : 'hu';
-
-        const raiser = players.find(p => p.id === openRaiserAction.player);
-        if (raiser) {
-            const raiserRangeData = rangeData[stackCategory]?.[playerCountCategory]?.[raiser.position]?.['RAISE'];
-            if (raiserRangeData) raiser.range = raiserRangeData;
-        }
-
-        const subsequentActions = preflopActions.slice(preflopActions.indexOf(openRaiserAction) + 1);
-        subsequentActions.forEach(action => {
-            const actor = players.find(p => p.id === action.player);
-            if (!actor) return;
-            let actionToRangeKey = '';
-            if (action.type === 'raises') actionToRangeKey = '3-BET';
-            if (action.type === 'calls') actionToRangeKey = 'CALL';
-            if (actionToRangeKey) {
-                const actorRangeData = rangeData[stackCategory]?.[playerCountCategory]?.[actor.position]?.[actionToRangeKey];
-                if (actorRangeData) actor.range = actorRangeData;
-            }
-        });
+    function calculateCurrentStreet(actions) { 
+        return actions.length > 0 ? actions[actions.length - 1].street : 'preflop'; 
     }
 
-    function expandHandNotation(handNotation) {
-        const c1Rank = handNotation[0];
-        const c2Rank = handNotation[1];
-        const isSuited = handNotation.length === 3 && handNotation[2] === 's';
-        const isPair = c1Rank === c2Rank;
-        const suits = ['s', 'h', 'd', 'c'];
-        const hands = [];
-        if (isPair) {
-            for (let i = 0; i < suits.length; i++) {
-                for (let j = i + 1; j < suits.length; j++) hands.push([c1Rank + suits[i], c1Rank + suits[j]]);
+    function categorizeHeroHand(heroHand, board) {
+        const strength = getHandStrengthOnBoard(heroHand, board);
+        const handRank = strength.madeHand;
+        
+        if (handRank >= PokerUtils.HAND_RANK_ORDER.STRAIGHT) return 'プレミアムメイドハンド';
+        if (handRank === PokerUtils.HAND_RANK_ORDER.TWO_PAIR || handRank === PokerUtils.HAND_RANK_ORDER.THREE_OF_A_KIND) return 'ストロングメイドハンド';
+        if (strength.pairType === 'TOP_PAIR' || strength.pairType === 'OVER_PAIR') return 'ミドルメイドハンド';
+        if (handRank === PokerUtils.HAND_RANK_ORDER.ONE_PAIR) return 'ウィークメイドハンド';
+        if (strength.isFlushDraw || strength.isOpenEnded) return 'ドローハンド';
+        if (strength.isGutshot) return 'インサイドショット';
+        return 'エア';
+    }
+
+    function generateActionCandidates(handCategory, isBetFacing, potSize, callAmount, userBetSize, rangeAdvantageInfo) {
+        const candidates = [];
+        const potBasedBets = [
+            { type: 'bet', amount: Math.round(potSize * 0.33) },
+            { type: 'bet', amount: Math.round(potSize * 0.5) },
+            { type: 'bet', amount: Math.round(potSize * 0.75) }
+        ];
+
+        if (isBetFacing) {
+            candidates.push({ type: 'fold', amount: 0 });
+            candidates.push({ type: 'call', amount: callAmount }); 
+            if (handCategory === 'プレミアムメイドハンド' || handCategory === 'ドローハンド') {
+                const raiseAmount = callAmount * 3;
+                candidates.push({ type: 'raise', amount: raiseAmount });
             }
-        } else if (isSuited) {
-            for (const suit of suits) hands.push([c1Rank + suit, c2Rank + suit]);
         } else {
-            for (let i = 0; i < suits.length; i++) {
-                for (let j = 0; j < suits.length; j++) {
-                    if (i !== j) hands.push([c1Rank + suits[i], c2Rank + suits[j]]);
+            candidates.push({ type: 'check', amount: 0 });
+            const advantageScore = rangeAdvantageInfo ? rangeAdvantageInfo.advantageScore : 1.0;
+            if (advantageScore > 1.8) {
+                candidates.push(potBasedBets[0]);
+            } else if (advantageScore > 1.2) {
+                if (handCategory !== 'エア' || Math.random() < 0.4) {
+                    candidates.push(potBasedBets[1]);
                 }
             }
+            
+            switch (handCategory) {
+                case 'プレミアムメイドハンド':
+                case 'ストロングメイドハンド':
+                    candidates.push(potBasedBets[1], potBasedBets[2]);
+                    break;
+                case 'ミドルメイドハンド':
+                    candidates.push(potBasedBets[0]);
+                    break;
+                case 'ドローハンド':
+                    candidates.push(potBasedBets[2]);
+                    break;
+            }
         }
-        return hands;
+        
+        if (!isBetFacing && userBetSize > 0) {
+            candidates.push({ type: 'bet', amount: userBetSize });
+        }
+
+        return Array.from(new Map(candidates.map(item => [`${item.type}_${item.amount}`, item])).values());
+    }
+
+    function evaluateRangeAdvantage(heroRange, opponentRange, board, heroHand) {
+        const blockers = [...heroHand, ...board];
+        const countHandStrength = (range, currentBlockers) => {
+            let nutCombos = 0;
+            let topPairCombos = 0;
+            let totalCombos = 0;
+
+            range.forEach(handNotation => {
+                const combos = PokerUtils.countCombos(handNotation, currentBlockers);
+                if (combos === 0) return;
+                
+                // ブロックされていない代表ハンドを一つ見つける
+                const representativeHand = expandHandNotation(handNotation).find(h => !h.some(c => currentBlockers.includes(c)));
+                if (!representativeHand) return;
+                
+                totalCombos += combos;
+                const strength = getHandStrengthOnBoard(representativeHand, board);
+
+                if (strength.madeHand >= PokerUtils.HAND_RANK_ORDER.TWO_PAIR) {
+                    nutCombos += combos;
+                } else if (strength.pairType === 'TOP_PAIR') {
+                    topPairCombos += combos;
+                }
+            });
+            return { nutCombos, topPairCombos, totalCombos };
+        };
+
+        // ヒーローのレンジはブロッカーなしで計算、相手のレンジはヒーローのハンドをブロッカーとして計算
+        const heroStats = countHandStrength(heroRange, board); // ヒーローのレンジはボードのみでブロックされる
+        const opponentStats = countHandStrength(opponentRange, blockers); // 相手のレンジはボード＋ヒーローのハンドでブロックされる
+        
+        if (heroStats.totalCombos === 0 || opponentStats.totalCombos === 0) {
+            return { heroNutPercentage: 0, opponentNutPercentage: 0, advantageScore: 1 };
+        }
+
+        const heroNutPercentage = (heroStats.nutCombos / heroStats.totalCombos);
+        const opponentNutPercentage = (opponentStats.nutCombos / opponentStats.totalCombos);
+        const advantageScore = heroNutPercentage / (opponentNutPercentage || 0.001);
+
+        return {
+            heroNutPercentage: heroNutPercentage * 100,
+            opponentNutPercentage: opponentNutPercentage * 100,
+            advantageScore: advantageScore
+        };
+    }
+
+    function calculateDollarEV(context, action) {
+        const hero = context.players.find(p => p.id === 'hero');
+        const heroIndex = context.players.indexOf(hero);
+        const opponents = context.players.filter(p => p.id !== 'hero' && !p.isFolded);
+        if (opponents.length === 0) return 0;
+
+        const initialStacks = context.players.map(p => p.stack + (p.totalBetInHand || 0) + (p.betsInStreet[calculateCurrentStreet(context.actions)] || 0) );
+        const initialEvs = PokerUtils.calculateICM(initialStacks, context.prizes);
+        const heroInitialEv = initialEvs[heroIndex];
+        
+        let finalStacks;
+        switch (action.type) {
+            case 'fold': return 0;
+            case 'check':
+                finalStacks = [...initialStacks];
+                const equityVsAll = calculateEquity(hero.hand, opponents.flatMap(o => o.range), context.board);
+                finalStacks[heroIndex] += context.potSize * equityVsAll;
+                opponents.forEach(opp => {
+                    const oppIndex = context.players.indexOf(opp);
+                    finalStacks[oppIndex] += context.potSize * (1 - equityVsAll) / opponents.length;
+                });
+                break;
+            case 'call': case 'bet': case 'raise':
+                const foldProb = 0.5, callProb = 0.5;
+                const stacksAfterFold = [...initialStacks];
+                stacksAfterFold[heroIndex] += context.potSize;
+                const stacksAfterCall = [...initialStacks];
+                const potAfterCall = context.potSize + action.amount * (opponents.length + 1);
+                const equityVsCallingRange = calculateEquity(hero.hand, opponents.flatMap(o => o.range), context.board);
+                stacksAfterCall[heroIndex] += potAfterCall * equityVsCallingRange;
+                opponents.forEach(opp => {
+                     const oppIndex = context.players.indexOf(opp);
+                     stacksAfterCall[oppIndex] += potAfterCall * (1 - equityVsCallingRange) / opponents.length;
+                });
+                const evAfterFold = PokerUtils.calculateICM(stacksAfterFold, context.prizes)[heroIndex];
+                const evAfterCall = PokerUtils.calculateICM(stacksAfterCall, context.prizes)[heroIndex];
+                const totalFinalEv = (evAfterFold * foldProb) + (evAfterCall * callProb);
+                return totalFinalEv - heroInitialEv;
+        }
+        if (finalStacks) {
+            const finalEvs = PokerUtils.calculateICM(finalStacks, context.prizes);
+            return finalEvs[heroIndex] - heroInitialEv;
+        }
+        return 0;
+    }
+
+    function calculateEvOfBet(context, betSize, opponent) {
+        const { board, potSize } = context;
+        const hero = context.players.find(p => p.id === 'hero');
+        if (!hero || !opponent.range || opponent.range.length === 0) return null;
+
+        const blockers = [...hero.hand, ...board];
+        let totalCombos = 0;
+        let raisingCombos = 0;
+        let callingCombos = 0;
+        const callingRangeNotationsForEquity = [];
+
+        opponent.range.forEach(handNotation => {
+            const combos = PokerUtils.countCombos(handNotation, blockers);
+            if (combos === 0) return;
+
+            totalCombos += combos;
+
+            // ハンドの強さを評価するために、ブロックされていない代表的なコンボを一つ見つける
+            const representativeHand = expandHandNotation(handNotation).find(h => !h.some(c => blockers.includes(c)));
+            if (!representativeHand) return; // 念の為のガード節
+
+            const strength = getHandStrengthOnBoard(representativeHand, board);
+
+            // GTO的な意思決定ロジック（簡略版）
+            if (strength.madeHand >= PokerUtils.HAND_RANK_ORDER.TWO_PAIR) {
+                raisingCombos += combos;
+            } else if (strength.madeHand >= PokerUtils.HAND_RANK_ORDER.ONE_PAIR || 
+                       strength.isFlushDraw || strength.isOpenEnded) {
+                callingCombos += combos;
+                callingRangeNotationsForEquity.push(handNotation);
+            }
+        });
+        
+        if (totalCombos === 0) {
+            return { totalEv: potSize, details: { foldProbability: 1, callProbability: 0, raiseProbability: 0, evWhenFolded: potSize, evWhenCalled: 0, evWhenRaised: 0, equityVsCallingRange: 0.5, opponentRangeSize: 0, opponentCallingRangeSize: 0, opponentRaisingRangeSize: 0 } };
+        }
+
+        const raiseProbability = raisingCombos / totalCombos;
+        const callProbability = callingCombos / totalCombos;
+        const foldProbability = Math.max(0, 1 - raiseProbability - callProbability);
+
+        const evWhenFolded = potSize;
+        const evWhenRaised = -betSize; // 相手にレイズされたらフォールドすると仮定
+        
+        let evWhenCalled = 0;
+        let equityVsCallingRange = 0.5; // デフォルト値
+        if (callProbability > 0 && callingRangeNotationsForEquity.length > 0) {
+            equityVsCallingRange = calculateEquity(hero.hand, callingRangeNotationsForEquity, board, 500);
+            const potWhenCalled = potSize + betSize + betSize;
+            evWhenCalled = (potWhenCalled * equityVsCallingRange) - betSize;
+        }
+
+        const totalEv = (foldProbability * evWhenFolded) + (callProbability * evWhenCalled) + (raiseProbability * evWhenRaised);
+        
+        return { 
+            totalEv,
+            details: { 
+                foldProbability, 
+                callProbability, 
+                raiseProbability, 
+                evWhenFolded, 
+                evWhenCalled, 
+                evWhenRaised, 
+                equityVsCallingRange, 
+                opponentRangeSize: Math.round(totalCombos), 
+                opponentCallingRangeSize: Math.round(callingCombos), 
+                opponentRaisingRangeSize: Math.round(raisingCombos) 
+            } 
+        };
     }
 
     function getHandStrengthOnBoard(hand, board) {
@@ -1093,21 +541,18 @@ function initializeGtcCalculator() {
         return { madeHand: best5CardDetails.rank, pairType, isFlushDraw, isOpenEnded, isGutshot };
     }
 
-    function narrowRanges(context) {
-        // This function is now simplified to only process folds, 
-        // as the more complex opponent modeling is handled in calculateEvOfBet.
-        const { players, actions } = context;
-        players.forEach(p => { p.isFolded = false; });
-
-        actions.forEach(action => {
-            if (action.type === 'folds') {
-                const player = players.find(p => p.id === action.player);
-                if (player) {
-                    player.isFolded = true;
-                }
-            }
-        });
-        console.log("Ranges processed for folds only.");
+    function expandHandNotation(handNotation) {
+        const c1Rank = handNotation[0], c2Rank = handNotation[1];
+        const isSuited = handNotation.length === 3 && handNotation[2] === 's', isPair = c1Rank === c2Rank;
+        const suits = ['s', 'h', 'd', 'c'], hands = [];
+        if (isPair) {
+            for (let i = 0; i < suits.length; i++) for (let j = i + 1; j < suits.length; j++) hands.push([c1Rank + suits[i], c1Rank + suits[j]]);
+        } else if (isSuited) {
+            for (const suit of suits) hands.push([c1Rank + suit, c2Rank + suit]);
+        } else {
+            for (let i = 0; i < suits.length; i++) for (let j = 0; j < suits.length; j++) if (i !== j) hands.push([c1Rank + suits[i], c2Rank + suits[j]]);
+        }
+        return hands;
     }
 
     function calculateEquity(heroHand, opponentRange, board, simulations = 1000) {
@@ -1143,6 +588,403 @@ function initializeGtcCalculator() {
         return (wins + ties / 2) / simulations;
     }
 
+    return {
+        calculateAllEVs,
+        categorizeHeroHand,
+        calculateEquity,
+        getHandStrengthOnBoard,
+        expandHandNotation
+    };
+})();
+
+function initializeGtcCalculator() {
+    const gtcContainer = document.getElementById('gtc-calculator');
+    if (!gtcContainer) return;
+
+    // Views
+    const formView = document.getElementById('gtc-form-view');
+    const analysisScreen = document.getElementById('gtc-analysis-screen');
+    const resultView = document.getElementById('gtc-result-view');
+
+    // Form Elements
+    const gameTypeRadios = document.querySelectorAll('input[name="gtc-game-type"]');
+    const tournamentFields = document.getElementById('gtc-tournament-fields');
+    const playerCountSelect = document.getElementById('gtc-player-count');
+    const playersInfoContainer = document.getElementById('gtc-players-info');
+    const boardCardsContainer = document.getElementById('gtc-board-cards');
+    const historyRowsContainer = document.getElementById('gtc-history-rows');
+
+    const addPrizeBtn = document.getElementById('gtc-add-prize-btn');
+    const prizesContainer = document.getElementById('gtc-prizes-container');
+
+    // Buttons
+    const analyzeBtn = document.getElementById('gtc-analyze-btn');
+    const backBtn = document.getElementById('gtc-back-btn');
+    const resetBtn = document.getElementById('gtc-reset-btn');
+    const addActionBtn = document.getElementById('gtc-add-action-btn');
+
+    const betSizeGroup = document.createElement('div');
+    betSizeGroup.className = 'gtc-input-group';
+    betSizeGroup.style.marginTop = '20px';
+    betSizeGroup.innerHTML = `
+        <label for="gtc-bet-size">評価したいベットサイズ (点):</label>
+        <input type="number" id="gtc-bet-size" placeholder="例: 300" value="100">
+    `;
+    analyzeBtn.parentNode.insertBefore(betSizeGroup, analyzeBtn);
+    
+    const resultContent = document.getElementById('gtc-result-content');
+
+    const POSITIONS = ["BTN", "SB", "BB", "UTG", "HJ", "CO"];
+    const STREETS = { 'preflop': 'プリフロップ', 'flop': 'フロップ', 'turn': 'ターン', 'river': 'リバー' };
+    const ACTIONS = { 'folds': 'フォールド', 'checks': 'チェック', 'calls': 'コール', 'bets': 'ベット', 'raises': 'レイズ' };
+
+    function createCardInput(idPrefix) {
+        const rankSelect = `<select id="${idPrefix}-rank" class="gtc-rank-input"><option value="">-</option>${PokerUtils.RANKS.split('').map(r => `<option value="${r}">${r}</option>`).join('')}</select>`;
+        const suitSelect = `<select id="${idPrefix}-suit" class="gtc-suit-select"><option value="">-</option>${Object.entries(PokerUtils.SUITS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>`;
+        return `<div class="card-input">${rankSelect}${suitSelect}</div>`;
+    }
+
+    function generatePlayerForms() {
+        const count = parseInt(playerCountSelect.value, 10);
+        playersInfoContainer.innerHTML = '<h3>プレイヤー情報</h3>';
+        for (let i = 1; i <= count; i++) {
+            const isHero = i === 1;
+            const playerForm = document.createElement('div');
+            playerForm.className = 'gtc-player-form';
+            const handInputHTML = isHero ? `
+                <div class="gtc-input-group">
+                    <label>ハンド:</label>
+                    <div class="hand-inputs">
+                        ${createCardInput(`gtc-hand-${i}-c1`)}
+                        ${createCardInput(`gtc-hand-${i}-c2`)}
+                    </div>
+                </div>` : '';
+            playerForm.innerHTML = `
+                <h4>${isHero ? '自分 (Hero)' : 'プレイヤー ' + i}</h4>
+                <div class="gtc-player-inputs">
+                    <div class="gtc-input-group">
+                        <label for="gtc-pos-${i}">ポジション:</label>
+                        <select id="gtc-pos-${i}">${POSITIONS.map(p => `<option value="${p}">${p}</option>`).join('')}</select>
+                    </div>
+                    <div class="gtc-input-group">
+                        <label for="gtc-stack-${i}">スタック:</label>
+                        <input type="number" id="gtc-stack-${i}" placeholder="Stack">
+                    </div>
+                </div>
+                ${handInputHTML}`;
+            playersInfoContainer.appendChild(playerForm);
+        }
+        historyRowsContainer.innerHTML = '';
+        addActionRow();
+    }
+    
+    function addActionRow() {
+        const playerCount = parseInt(playerCountSelect.value, 10);
+        const actionRow = document.createElement('div');
+        actionRow.className = 'action-history-row';
+        let playerOptions = '<option value="hero">自分 (Hero)</option>';
+        for (let i = 2; i <= playerCount; i++) {
+            playerOptions += `<option value="player${i}">プレイヤー ${i}</option>`;
+        }
+        actionRow.innerHTML = `
+            <div class="gtc-action-group"><label>ストリート</label><select class="gtc-action-street">${Object.entries(STREETS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+            <div class="gtc-action-group"><label>プレイヤー</label><select class="gtc-action-player">${playerOptions}</select></div>
+            <div class="gtc-action-group"><label>アクション</label><select class="gtc-action-type">${Object.entries(ACTIONS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+            <div class="gtc-action-group"><label>額</label><input type="number" class="gtc-action-amount" placeholder="例: 100"></div>
+            <button class="gtc-remove-action-btn">削除</button>
+        `;
+        historyRowsContainer.appendChild(actionRow);
+        actionRow.querySelector('.gtc-remove-action-btn').addEventListener('click', () => actionRow.remove());
+    }
+
+    function generateBoardCards() {
+        const boardCardNames = ['Flop 1', 'Flop 2', 'Flop 3', 'Turn', 'River'];
+        boardCardsContainer.innerHTML = boardCardNames.map((name, i) => `<div class="gtc-input-group"><label>${name}</label>${createCardInput(`gtc-board-c${i+1}`)}</div>`).join('');
+    }
+
+    function addPrizeRow() {
+        const prizeCount = prizesContainer.children.length + 1;
+        const prizeRow = document.createElement('div');
+        prizeRow.className = 'gtc-prize-input-row';
+        prizeRow.innerHTML = `<label>${prizeCount}位:</label><input type="number" class="gtc-prize-amount" placeholder="賞金額"><button type="button" class="gtc-remove-prize-btn">×</button>`;
+        prizesContainer.appendChild(prizeRow);
+        prizeRow.querySelector('.gtc-remove-prize-btn').addEventListener('click', () => {
+            prizeRow.remove();
+            prizesContainer.querySelectorAll('label').forEach((label, index) => { label.textContent = `${index + 1}位:`; });
+        });
+    }
+
+    async function handleAnalyze() {
+        analysisScreen.style.display = 'block';
+        formView.style.display = 'none';
+        resultView.style.display = 'none';
+        const startTime = Date.now();
+        const MINIMUM_DELAY = 1500;
+
+        try {
+            const gameContext = buildGameContext();
+            const userBetSize = parseFloat(document.getElementById('gtc-bet-size').value) || 0;
+            calculateDerivedContext(gameContext);
+            assignInitialRanges(gameContext);
+            narrowRanges(gameContext); 
+            
+            let rangeAdvantageInfo = null;
+            if (gameContext.board.length >= 3 && gameContext.players[0].range) {
+                 const opponents = gameContext.players.filter(p => p.id !== 'hero' && !p.isFolded);
+                 const combinedOpponentRange = Array.from(new Set(opponents.flatMap(opp => opp.range || [])));
+                 if(combinedOpponentRange.length > 0) {
+                    // 修正点：4番目の引数にヒーローのハンドを追加
+                    rangeAdvantageInfo = GtcAnalysis.evaluateRangeAdvantage(gameContext.players[0].range, combinedOpponentRange, gameContext.board, gameContext.players[0].hand);
+                 }
+            }
+            const analysisData = GtcAnalysis.calculateAllEVs(gameContext, userBetSize);
+            
+            const elapsedTime = Date.now() - startTime;
+            const remainingDelay = Math.max(0, MINIMUM_DELAY - elapsedTime);
+            await new Promise(resolve => setTimeout(resolve, remainingDelay));
+            
+            renderResults(gameContext, analysisData, rangeAdvantageInfo);
+
+        } catch (error) {
+            console.error("Analysis Error:", error);
+            resultContent.innerHTML = `<p style="color: red;">分析中にエラーが発生しました。入力値やアクションの順序が正しいか確認してください。</p><pre>${error.stack}</pre>`;
+        } finally {
+            analysisScreen.style.display = 'none';
+            resultView.style.display = 'block';
+        }
+    }
+
+    function buildGameContext() {
+        const context = { players: [], board: [], actions: [] };
+        context.gameType = document.querySelector('input[name="gtc-game-type"]:checked').value;
+        context.sb = parseFloat(document.getElementById('gtc-sb').value) || 0;
+        context.bb = parseFloat(document.getElementById('gtc-bb').value) || 0;
+        
+        if (context.gameType === 'tournament') {
+            context.prizes = [];
+            prizesContainer.querySelectorAll('.gtc-prize-amount').forEach(input => {
+                const prize = parseFloat(input.value);
+                if (!isNaN(prize) && prize > 0) context.prizes.push(prize);
+            });
+        }
+
+        const playerCount = parseInt(playerCountSelect.value, 10);
+        for (let i = 1; i <= playerCount; i++) {
+            const player = {
+                id: i === 1 ? 'hero' : `player${i}`,
+                position: document.getElementById(`gtc-pos-${i}`).value,
+                stack: parseFloat(document.getElementById(`gtc-stack-${i}`).value) || 0,
+                betsInStreet: { preflop: 0, flop: 0, turn: 0, river: 0 },
+                hand: []
+            };
+            if (i === 1) {
+                const r1 = document.getElementById('gtc-hand-1-c1-rank').value, s1 = document.getElementById('gtc-hand-1-c1-suit').value;
+                const r2 = document.getElementById('gtc-hand-1-c2-rank').value, s2 = document.getElementById('gtc-hand-1-c2-suit').value;
+                if (r1 && s1) player.hand.push(r1 + s1);
+                if (r2 && s2) player.hand.push(r2 + s2);
+            }
+            context.players.push(player);
+        }
+
+        for (let i = 1; i <= 5; i++) {
+            const rank = document.getElementById(`gtc-board-c${i}-rank`).value, suit = document.getElementById(`gtc-board-c${i}-suit`).value;
+            if (rank && suit) context.board.push(rank + suit);
+        }
+
+        historyRowsContainer.querySelectorAll('.action-history-row').forEach(row => {
+            context.actions.push({
+                street: row.querySelector('.gtc-action-street').value,
+                player: row.querySelector('.gtc-action-player').value,
+                type: row.querySelector('.gtc-action-type').value,
+                amount: parseFloat(row.querySelector('.gtc-action-amount').value) || 0
+            });
+        });
+        return context;
+    }
+
+    function calculateDerivedContext(context) {
+        context.players.forEach(p => {
+            p.betsInStreet = { preflop: 0, flop: 0, turn: 0, river: 0 };
+            p.totalBetInHand = 0;
+            p.isFolded = false;
+        });
+        let totalPot = 0;
+        const sbPlayer = context.players.find(p => p.position === 'SB');
+        const bbPlayer = context.players.find(p => p.position === 'BB');
+        if (sbPlayer) sbPlayer.betsInStreet.preflop = Math.min(sbPlayer.stack, context.sb);
+        if (bbPlayer) bbPlayer.betsInStreet.preflop = Math.min(bbPlayer.stack, context.bb);
+
+        let lastStreet = 'preflop', highestBetOnStreet = context.bb;
+        context.actions.forEach(action => {
+            const player = context.players.find(p => p.id === action.player);
+            if (!player || player.isFolded) return;
+            if (action.street !== lastStreet) {
+                context.players.forEach(p => {
+                    totalPot += p.betsInStreet[lastStreet];
+                    p.totalBetInHand += p.betsInStreet[lastStreet];
+                    p.betsInStreet[lastStreet] = 0;
+                });
+                highestBetOnStreet = 0;
+                lastStreet = action.street;
+            }
+            const currentBet = player.betsInStreet[action.street];
+            switch (action.type) {
+                case 'folds': player.isFolded = true; break;
+                case 'calls': player.betsInStreet[action.street] += highestBetOnStreet - currentBet; break;
+                case 'bets': case 'raises':
+                    highestBetOnStreet = action.amount;
+                    player.betsInStreet[action.street] = action.amount;
+                    break;
+            }
+        });
+        let currentStreetBets = 0;
+        context.players.forEach(p => {
+            if (!p.isFolded) currentStreetBets += p.betsInStreet[lastStreet];
+            else totalPot += p.betsInStreet[lastStreet];
+        });
+        context.potSize = totalPot + currentStreetBets;
+    }
+
+    function assignInitialRanges(context) {
+        const { players, actions, sb, bb } = context;
+        players.forEach(p => p.range = PokerUtils.getAllHands());
+        const preflopActions = actions.filter(a => a.street === 'preflop');
+        const openRaiserAction = preflopActions.find(a => a.type === 'raises');
+        if (!openRaiserAction) return;
+
+        const stackInBB = Math.min(...players.map(p => p.stack)) / bb;
+        const stackCategory = stackInBB >= 50 ? '100bb' : '20bb';
+        const playerCountCategory = players.length > 2 ? '6max' : 'hu';
+
+        const raiser = players.find(p => p.id === openRaiserAction.player);
+        if (raiser) {
+            const raiserRangeData = rangeData[stackCategory]?.[playerCountCategory]?.[raiser.position]?.['RAISE'];
+            if (raiserRangeData) raiser.range = raiserRangeData;
+        }
+
+        const subsequentActions = preflopActions.slice(preflopActions.indexOf(openRaiserAction) + 1);
+        subsequentActions.forEach(action => {
+            const actor = players.find(p => p.id === action.player);
+            if (!actor) return;
+            let actionToRangeKey = '';
+            if (action.type === 'raises') actionToRangeKey = '3-BET';
+            if (action.type === 'calls') actionToRangeKey = 'CALL';
+            if (actionToRangeKey) {
+                const actorRangeData = rangeData[stackCategory]?.[playerCountCategory]?.[actor.position]?.[actionToRangeKey];
+                if (actorRangeData) actor.range = actorRangeData;
+            }
+        });
+    }
+
+    function narrowRanges(context) {
+        const { players, actions } = context;
+        players.forEach(p => { p.isFolded = false; });
+        actions.forEach(action => {
+            if (action.type === 'folds') {
+                const player = players.find(p => p.id === action.player);
+                if (player) player.isFolded = true;
+            }
+        });
+    }
+
+    function renderResults(context, analysisData, rangeAdvantageInfo) {
+        const { results } = analysisData;
+        if (!results || Object.keys(results).length === 0) {
+            resultContent.innerHTML = `<p style="color: #ffc107;">分析できる有効なアクション候補がありません。状況設定を確認してください。</p>`;
+            return;
+        }
+
+        const isTournament = context.gameType === 'tournament' && context.prizes && context.prizes.length > 0;
+        const evUnit = isTournament ? '$EV' : 'EV', evDescription = isTournament ? '賞金期待値' : '期待値';
+        const hero = context.players.find(p => p.id === 'hero');
+        const opponents = context.players.filter(p => p.id !== 'hero' && !p.isFolded);
+        const combinedOpponentRange = Array.from(new Set(opponents.flatMap(opp => opp.range || [])));
+
+        const bestActionKey = Object.keys(results).reduce((a, b) => results[a].ev > results[b].ev ? a : b);
+        const bestAction = results[bestActionKey];
+        const [actionType, actionAmountStr] = bestActionKey.split('_');
+        const actionAmount = bestAction.amount;
+        let formattedBestAction;
+        if (actionType === 'bet' || actionType === 'raise') formattedBestAction = `${actionType === 'bet' ? 'ベット' : 'レイズ'} (${actionAmount})`;
+        else formattedBestAction = actionType === 'call' ? `コール (${actionAmount})` : actionType.charAt(0).toUpperCase() + actionType.slice(1);
+
+        let rationale = '';
+        const handCategory = GtcAnalysis.categorizeHeroHand(hero.hand, context.board);
+
+        if ((actionType === 'bet' || actionType === 'raise') && (handCategory === 'エア' || handCategory === 'インサイドショット') && rangeAdvantageInfo && rangeAdvantageInfo.advantageScore > 1.5) {
+            rationale = `あなたのハンド(${hero.hand.join(', ')})はボードにヒットしていませんが、このボードはプリフロップでのあなたのアクションと非常に相性が良く、相手のレンジに対して有利（**レンジアドバンテージ**）です。そのため、積極的にベット（Cベット）してポットを獲得しにいくブラフが、最も期待値の高いアクションとなります。`;
+        } else {
+            switch (actionType) {
+                case 'bet': case 'raise':
+                    if (handCategory === 'プレミアムメイドハンド' || handCategory === 'ストロングメイドハンド') rationale = `あなたのハンド(${hero.hand.join(', ')})は「${handCategory}」に分類されます。相手のレンジにはコールが期待できるペアなどが十分に存在するため、価値を引き出すためのベット（バリューベット）が最適です。`;
+                    else if (handCategory === 'ドローハンド' || handCategory === 'インサイドショット') rationale = `あなたのハンド(${hero.hand.join(', ')})は強い役に発展する可能性を秘めた「${handCategory}」です。相手をフォールドさせること、そして役が完成した際に大きなポットを獲得することの両方を狙うベット（セミブラフ）が有効な選択肢となります。`;
+                    else rationale = `あなたのハンド(${hero.hand.join(', ')})は現状では弱いですが、相手のレンジがこのボードに合っていない可能性を考慮し、プレッシャーをかけるためのベット（ブラフ）が最も期待値が高いと判断しました。`;
+                    break;
+                case 'call': rationale = `相手のベットに対して、あなたのハンド(${hero.hand.join(', ')})は勝っている可能性も十分にあり、ポットオッズも合っているため、コールして次のストリートを見にいくのが最も期待値が高いアクションです。`; break;
+                case 'check':
+                    if (handCategory === 'ウィークメイドハンド' || handCategory === 'ミドルメイドハンド') rationale = `あなたのハンド(${hero.hand.join(', ')})は「${handCategory}」に分類され、一定の強さはありますが、相手からのベットには弱い状態です。ポットをコントロールし、安くショーダウンを目指すためにチェックするのが最適なアクションです。`;
+                    else rationale = `あなたのハンド(${hero.hand.join(', ')})で積極的にベットするメリットが少ないため、相手のアクションを見てから判断するためにチェックするのが堅実な選択です。`;
+                    break;
+                case 'fold': rationale = `相手のベットに対して、あなたのハンド(${hero.hand.join(', ')})の勝率は極めて低く、コールに見合うポットオッズもありません。ここでは損失を最小限に抑えるためのフォールドが最適なアクションです。`; break;
+            }
+        }
+
+        let html = `<h3>分析結果</h3><div class="gtc-result-summary"><p><strong>最適アクション:</strong> <span class="gtc-best-action">${formattedBestAction}</span></p><p><strong>${evDescription} (${evUnit}):</strong> <span class="gtc-best-action-ev">${bestAction.ev.toFixed(2)}</span></p><p><strong>根拠:</strong> ${rationale}</p></div><hr><div class="analysis-details">`;
+        html += `<details class="analysis-details-section"><summary>状況サマリー</summary><table class="analysis-details-table"><tr><th>ボード</th><td>${context.board.join(' ')}</td></tr><tr><th>ポットサイズ</th><td>${context.potSize}</td></tr><tr><th>あなたのハンド</th><td>${hero.hand.join(' ')}</td></tr><tr><th>あなたのスタック</th><td>${hero.stack}</td></tr></table></details>`;
+        const equity = GtcAnalysis.calculateEquity(hero.hand, combinedOpponentRange, context.board);
+        html += `<details class="analysis-details-section"><summary>ハンド評価とエクイティ</summary><table class="analysis-details-table"><tr><th>ハンド分類</th><td>${GtcAnalysis.categorizeHeroHand(hero.hand, context.board)}</td></tr><tr><th>対相手レンジ勝率</th><td>${(equity * 100).toFixed(2)} %</td></tr></table></details>`;
+        
+        if (hero.range && combinedOpponentRange.length > 0) {
+             const blockers = [...hero.hand, ...board];
+             const heroComboCount = hero.range.reduce((sum, h) => sum + PokerUtils.countCombos(h, []), 0);
+             const oppoComboCount = combinedOpponentRange.reduce((sum, h) => sum + PokerUtils.countCombos(h, blockers), 0);
+            html += `<details class="analysis-details-section"><summary>レンジ分析</summary><h4>あなたの推定レンジ (${hero.range.length}種類, 約${Math.round(heroComboCount)}コンボ)</h4><div class="range-display-list">${hero.range.join(', ')}</div><h4>相手の推定レンジ (${combinedOpponentRange.length}種類, 約${Math.round(oppoComboCount)}コンボ)</h4><div class="range-display-list">${combinedOpponentRange.join(', ')}</div></details>`;
+        }
+
+        if (rangeAdvantageInfo) {
+             html += `<details class="analysis-details-section"><summary>レンジアドバンテージ評価</summary><table class="analysis-details-table"><tr><th></th><th>あなた</th><th>相手</th></tr><tr><th>ナッツ級ハンドの割合</th><td>${rangeAdvantageInfo.heroNutPercentage.toFixed(2)}%</td><td>${rangeAdvantageInfo.opponentNutPercentage.toFixed(2)}%</td></tr><tr><th>アドバンテージ指数</th><td colspan="2">${rangeAdvantageInfo.advantageScore.toFixed(2)} (1.0より大きいと有利)</td></tr></table></details>`;
+        }
+
+        // ▼▼▼ ここから新しいコードを追加 ▼▼▼
+        const blockerEffectData = GtcAnalysis.analyzeBlockerEffect(hero.hand, combinedOpponentRange, context.board);
+        if (blockerEffectData.summary) {
+            html += `
+            <details class="analysis-details-section">
+                <summary>ブロッカー効果分析</summary>
+                <p class="blocker-summary">${blockerEffectData.summary}</p>
+                <div class="blocker-list-container">
+                    <h6>コンボ減少ハンドリスト:</h6>
+                    <ul class="blocker-list">
+                        ${blockerEffectData.blockedHands.map(item => `<li><strong>${item.hand}</strong> (${item.before} → <span class="blocked-count">${item.after}</span>コンボ)</li>`).join('')}
+                    </ul>
+                </div>
+            </details>`;
+        }
+        // ▲▲▲ ここまで追加 ▲▲▲
+
+        const sortedResults = Object.entries(results).sort(([,a],[,b]) => b.ev - a.ev);
+        html += `<details class="analysis-details-section" open><summary>各アクションの詳細分析</summary>`;
+        sortedResults.forEach(([key, value]) => {
+            const [type, amountStr] = key.split('_');
+            let formattedAction;
+            switch (type) {
+                case 'bet': case 'raise': formattedAction = `${type === 'bet' ? 'ベット' : 'レイズ'} ${amountStr}`; break;
+                case 'call': formattedAction = `コール (${value.amount})`; break;
+                case 'check': formattedAction = 'チェック'; break;
+                case 'fold': formattedAction = 'フォールド'; break;
+                default: formattedAction = key;
+            }
+            html += `<div class="action-detail-box ${key === bestActionKey ? 'is-best' : ''}"><div class="action-detail-header"><strong>${formattedAction}</strong><span>${evUnit}: ${value.ev.toFixed(2)} ${key === bestActionKey ? '🏆' : ''}</span></div>`;
+            if (value.details) {
+                const d = value.details;
+                html += `<table class="analysis-details-table compact"><tr><th>相手の反応予測</th><td>フォールド: ${(d.foldProbability * 100).toFixed(1)}%</td><td>コール: ${(d.callProbability * 100).toFixed(1)}%</td><td>レイズ: ${(d.raiseProbability * 100).toFixed(1)}%</td></tr><tr><th>シナリオ別EV</th><td>vsFold: ${d.evWhenFolded.toFixed(2)}</td><td>vsCall: ${d.evWhenCalled.toFixed(2)}</td><td>vsRaise: ${d.evWhenRaised.toFixed(2)}</td></tr><tr><th>相手コンボ数</th><td colspan="3">合計: ${d.opponentRangeSize}, コール: ${d.opponentCallingRangeSize}, レイズ: ${d.opponentRaisingRangeSize}</td></tr></table>`;
+            }
+            html += `</div>`;
+        });
+        html += `</details></div>`;
+        resultContent.innerHTML = html;
+    }
+
     function resetGtcForm() {
         const inputs = formView.querySelectorAll('input, select');
         inputs.forEach(input => {
@@ -1158,7 +1000,6 @@ function initializeGtcCalculator() {
         gameTypeRadios[0].dispatchEvent(new Event('change'));
         historyRowsContainer.innerHTML = '';
         addActionRow();
-        
         resultView.style.display = 'none';
         analysisScreen.style.display = 'none';
         formView.style.display = 'block';
@@ -1173,19 +1014,10 @@ function initializeGtcCalculator() {
         formView.style.display = 'block';
     });
     resetBtn.addEventListener('click', resetGtcForm);
-
     addPrizeBtn.addEventListener('click', addPrizeRow);
-    // 初期状態で3位までの入力欄を生成
-    addPrizeRow();
-    addPrizeRow();
-    addPrizeRow();
-
-    // Initial setup
-
-
+    addPrizeRow(); addPrizeRow(); addPrizeRow();
     generatePlayerForms();
     generateBoardCards();
-
     addActionRow();
 }
 
@@ -1495,30 +1327,92 @@ const TexasHoldemGame = (() => {
     function init() {
         dom = {
             setupScreen: document.getElementById('th-setup-screen'), gameScreen: document.getElementById('th-game-screen'),
+            modeSelectionScreen: document.getElementById('th-mode-selection-screen'),
             playersWrapper: document.getElementById('th-players-wrapper'), potTotalElem: document.getElementById('th-pot-total-value'),
             communityCardsArea: document.getElementById('th-community-cards-area'), showdownResultsArea: document.getElementById('th-showdown-results-area'),
             alertElement: document.getElementById('th-custom-alert'), resetButton: document.getElementById('th-reset-game-btn')
         };
-        if(!dom.setupScreen) return;
+        if(!dom.modeSelectionScreen) return; // modeSelectionScreenがあるかチェック
+
+        // ▼▼▼ 既存の renderSetupScreen() の呼び出しを、以下の関数に置き換える ▼▼▼
+        renderModeSelectionScreen(); 
+        
+        // ゲームリセットボタンのイベントリスナーは変更なし (initを呼び出すのでモード選択に戻る)
         dom.resetButton.addEventListener('click', () => { if (confirm("本当にゲームをリセットして設定画面に戻りますか？")) init(); });
+    }
+
+    function renderModeSelectionScreen() {
+        // 全ての画面を一旦非表示にする
+        dom.modeSelectionScreen.style.display = 'block';
+        dom.setupScreen.style.display = 'none';
+        dom.gameScreen.style.display = 'none';
+
+        // ボタンにクリックイベントを設定
+        dom.modeSelectionScreen.querySelector('#th-start-ai-btn').onclick = () => startGameMode('ai');
+        dom.modeSelectionScreen.querySelector('#th-start-player-btn').onclick = () => startGameMode('player');
+    }
+
+    function startGameMode(mode) {
+        // 選択されたモードをstateに保存
+        state.gameMode = mode;
+        
+        // モード選択画面を非表示にして、セットアップ画面を描画
+        dom.modeSelectionScreen.style.display = 'none';
         renderSetupScreen();
     }
 
     function renderSetupScreen() {
         dom.setupScreen.innerHTML = `<div class="setup-form"><label>プレイヤー数</label><select id="th-num-players">${[2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}">${n}人</option>`).join('')}</select><label>初期スタック</label><input type="number" id="th-initial-stack" value="10000"><label>SB</label><input type="number" id="th-small-blind" value="50"><label>BB</label><input type="number" id="th-big-blind" value="100"></div><button id="th-start-game-btn">ゲーム開始</button>`;
+        
+        const numPlayersSelect = dom.setupScreen.querySelector('#th-num-players');
+        if (state.gameMode === 'ai') {
+            numPlayersSelect.value = '6'; // 6人を選択
+            numPlayersSelect.disabled = true; // 変更不可にする
+        } else {
+            numPlayersSelect.disabled = false; // プレイヤー対戦では変更可能にする
+        }
+
         dom.setupScreen.querySelector('#th-start-game-btn').addEventListener('click', initializeGame);
-        dom.gameScreen.style.display = 'none'; dom.setupScreen.style.display = 'block';
+        dom.gameScreen.style.display = 'none'; 
+        dom.setupScreen.style.display = 'block'; // この行を追加/確認
     }
 
     function initializeGame() {
         const config = {
-            numPlayers: parseInt(document.getElementById('th-num-players').value), initialStack: parseInt(document.getElementById('th-initial-stack').value),
-            sb: parseInt(document.getElementById('th-small-blind').value), bb: parseInt(document.getElementById('th-big-blind').value)
+            numPlayers: parseInt(document.getElementById('th-num-players').value),
+            initialStack: parseInt(document.getElementById('th-initial-stack').value),
+            sb: parseInt(document.getElementById('th-small-blind').value),
+            bb: parseInt(document.getElementById('th-big-blind').value)
         };
         state = { config, players: [], pots: [], dealerIndex: -1, activePlayerIndex: -1, streetHighestBet: 0, lastRaiseSize: 0, streetIndex: 0, deck: [], communityCards: [], showdownWinners: null, isAnimating: false };
-        state.players = Array.from({ length: config.numPlayers }, (_, i) => ({ id: i, name: `プレイヤー ${i + 1}`, stack: config.initialStack, betInStreet: 0, totalBetInHand: 0, isEliminated: false, isFolded: false, hasActedThisStreet: false, isAllIn: false, hand: [], handDetails: null }));
-        dom.setupScreen.style.display = 'none'; dom.gameScreen.style.display = 'flex';
-        generatePlayerAreas(); startHand();
+        
+        state.players = Array.from({ length: config.numPlayers }, (_, i) => {
+            const player = {
+                id: i, 
+                name: `プレイヤー ${i + 1}`,
+                stack: config.initialStack, 
+                betInStreet: 0, 
+                totalBetInHand: 0, 
+                isEliminated: false, 
+                isFolded: false, 
+                hasActedThisStreet: false, 
+                isAllIn: false, 
+                hand: [], 
+                handDetails: null,
+                isAI: false // デフォルトはfalse
+            };
+
+            if (state.gameMode === 'ai' && i > 0) {
+                player.isAI = true;
+                player.name = `AI ${i}`;
+            }
+            return player;
+        });
+
+        dom.setupScreen.style.display = 'none'; 
+        dom.gameScreen.style.display = 'flex';
+        generatePlayerAreas(); 
+        startHand();
     }
     
     function generatePlayerAreas() {
@@ -1554,28 +1448,46 @@ const TexasHoldemGame = (() => {
     function updateUI() {
         state.players.forEach(p => {
             const area = document.getElementById(`player-area-${p.id}`);
-            area.classList.toggle('eliminated', p.isEliminated); area.classList.toggle('folded', p.isFolded); area.classList.toggle('active-turn', p.id === state.activePlayerIndex && !state.isAnimating);
-            document.getElementById(`stack-${p.id}`).textContent = `${p.stack}円`; document.getElementById(`dealer-${p.id}`).classList.toggle('active', p.id === state.dealerIndex);
+            area.classList.toggle('eliminated', p.isEliminated);
+            area.classList.toggle('folded', p.isFolded);
+            area.classList.toggle('active-turn', p.id === state.activePlayerIndex && !state.isAnimating);
+
+            document.getElementById(`stack-${p.id}`).textContent = `${p.stack}円`;
+            document.getElementById(`dealer-${p.id}`).classList.toggle('active', p.id === state.dealerIndex);
             document.getElementById(`bet-display-${p.id}`).textContent = p.betInStreet;
-            const blindElem = document.getElementById(`blind-${p.id}`); blindElem.className = 'blind-indicator';
-            if (p.id === state.sbIndex) { blindElem.textContent = 'SB'; blindElem.classList.add('active'); } if (p.id === state.bbIndex) { blindElem.textContent = 'BB'; blindElem.classList.add('active'); }
+
+            const blindElem = document.getElementById(`blind-${p.id}`);
+            blindElem.className = 'blind-indicator';
+            if (p.id === state.sbIndex) { blindElem.textContent = 'SB'; blindElem.classList.add('active'); }
+            if (p.id === state.bbIndex) { blindElem.textContent = 'BB'; blindElem.classList.add('active'); }
             
             const cardsArea = document.getElementById(`cards-area-${p.id}`);
-            const isHandOver = state.streetIndex > 3, activePlayersInHand = state.players.filter(pl => !pl.isEliminated && !pl.isFolded);
-            const showThisPlayersCards = !!state.showdownWinners || (p.id === state.activePlayerIndex && !state.isAnimating);
-            cardsArea.innerHTML = p.hand.map(card => renderCard(card, !showThisPlayersCards)).join('');
+            const isShowdown = !!state.showdownWinners;
+            const showCards = (isShowdown && !p.isFolded) || (p.id === 0);
+            cardsArea.innerHTML = p.hand.map(card => renderCard(card, !showCards)).join('');
+
+            // AIの思考中インジケーター
+            if (p.isAI && p.id === state.activePlayerIndex && state.isAnimating) {
+                cardsArea.innerHTML = '<div class="thinking-indicator">思考中...</div>';
+            }
+
             document.getElementById(`hand-rank-${p.id}`).textContent = (state.showdownWinners && p.handDetails) ? p.handDetails.name : '';
             
             const allButtons = area.querySelectorAll('.actions button, .raise-actions button, .raise-actions input');
-            const isDisabled = p.id !== state.activePlayerIndex || p.isEliminated || p.isFolded || state.isAnimating;
+            const isDisabled = p.id !== state.activePlayerIndex || p.isEliminated || p.isFolded || state.isAnimating || p.isAI;
             allButtons.forEach(el => el.disabled = isDisabled);
+
             if (!isDisabled) {
-                const callBtn = area.querySelector('.btn-call'), checkBtn = area.querySelector('.btn-check'), callAmount = state.streetHighestBet - p.betInStreet;
-                checkBtn.style.display = callAmount <= 0 ? '' : 'none'; callBtn.style.display = callAmount > 0 ? '' : 'none';
+                const callBtn = area.querySelector('.btn-call'), checkBtn = area.querySelector('.btn-check');
+                const callAmount = state.streetHighestBet - p.betInStreet;
+                checkBtn.style.display = callAmount <= 0 ? '' : 'none';
+                callBtn.style.display = callAmount > 0 ? '' : 'none';
                 if (callAmount > 0) callBtn.textContent = p.stack <= callAmount ? `オールイン (${p.stack})` : `コール (${callAmount})`;
+                
                 const minRaiseTotal = state.streetHighestBet + Math.max(state.lastRaiseSize, state.config.bb);
                 const canRaise = p.stack > callAmount && (p.stack + p.betInStreet) >= minRaiseTotal;
-                area.querySelector('.raise-actions').style.display = canRaise ? '' : 'none'; area.querySelector('.btn-all-in').disabled = isDisabled;
+                area.querySelector('.raise-actions').style.display = canRaise ? '' : 'none';
+                area.querySelector('.btn-all-in').disabled = isDisabled;
                 if (canRaise) {
                     const minRaiseAmount = minRaiseTotal - p.betInStreet;
                     const raiseSlider = area.querySelector('.raise-slider'), raiseInput = area.querySelector('.raise-input');
@@ -1588,7 +1500,10 @@ const TexasHoldemGame = (() => {
         dom.potTotalElem.textContent = state.pots.reduce((s, pot) => s + pot.amount, 0) + state.players.reduce((s, p) => s + p.betInStreet, 0);
         
         dom.showdownResultsArea.style.display = state.streetIndex > 3 ? 'block' : 'none';
-        if (state.streetIndex > 3) { if (state.showdownWinners) showShowdownResults(); else showNextHandButton(); }
+        if (state.streetIndex > 3) { 
+            if (state.showdownWinners) showShowdownResults(); 
+            else showNextHandButton(); 
+        }
     }
 
     function revealCommunityCardsWithAnimation() {
@@ -1634,142 +1549,318 @@ const TexasHoldemGame = (() => {
     function showNextHandButton() { dom.showdownResultsArea.innerHTML = `<button class="btn-next-hand">次のハンドへ</button>`; dom.showdownResultsArea.querySelector('button').addEventListener('click', startHand); }
     function showShowdownResults() {
         let html = `<h3>ショーダウン結果</h3><ul id="th-showdown-results-list">`;
-        const showdownPlayers = state.players.filter(p => !p.isFolded && p.handDetails).sort((a,b) => PokerUtils.compareHands(b.handDetails, a.handDetails));
-        showdownPlayers.forEach(p => {
-            const isWinner = state.showdownWinners.winners.some(w => w.id === p.id);
-            html += `<li class="${isWinner ? 'winner' : ''}">${p.name}: ${p.handDetails.name} ${isWinner ? '🏆' : ''}</li>`;
+        // ショーダウンに進んだ全プレイヤーのハンドと役を表示
+        state.showdownWinners.players.sort((a,b) => PokerUtils.compareHands(b.handDetails, a.handDetails)).forEach(p => {
+            html += `<li>${p.name}: ${p.handDetails.name}</li>`;
         });
         html += `</ul><button class="btn-next-hand">チップを分配して次のハンドへ</button>`;
         dom.showdownResultsArea.innerHTML = html;
-        dom.showdownResultsArea.querySelector('button').addEventListener('click', () => { distributeWinnings(); startHand(); });
+        dom.showdownResultsArea.querySelector('button').addEventListener('click', () => { 
+            distributeWinnings(); 
+            startHand(); 
+        });
     }
     
     function distributeWinnings(){
-        if (!state.showdownWinners) return;
-        const { winners, amount } = state.showdownWinners; const winAmount = Math.floor(amount / winners.length);
-        winners.forEach(winner => { const player = state.players.find(p => p.id === winner.id); if(player) player.stack += winAmount; });
-        showAlert("チップが分配されました");
+        if (state.pots.length === 0) return;
+
+        let winningsText = [];
+    
+        // 各ポットを順番に処理
+        state.pots.forEach((pot, index) => {
+            const eligiblePlayers = state.players.filter(p => 
+                pot.eligiblePlayerIds.includes(p.id) && !p.isFolded && p.handDetails
+            );
+    
+            if (eligiblePlayers.length === 0) return;
+    
+            if (eligiblePlayers.length === 1) {
+                const winner = eligiblePlayers[0];
+                winner.stack += pot.amount;
+                winningsText.push(`${winner.name}がポット${index + 1}(${pot.amount})を獲得`);
+                return; // 次のポットへ
+            }
+    
+            let bestHand = null;
+            eligiblePlayers.forEach(p => {
+                if (!bestHand || PokerUtils.compareHands(p.handDetails, bestHand) > 0) {
+                    bestHand = p.handDetails;
+                }
+            });
+    
+            const winners = eligiblePlayers.filter(p => PokerUtils.compareHands(p.handDetails, bestHand) === 0);
+            const winAmount = Math.floor(pot.amount / winners.length);
+            const remainder = pot.amount % winners.length;
+    
+            winners.forEach(winner => {
+                winner.stack += winAmount;
+                winningsText.push(`${winner.name}がポット${index + 1}(${winAmount})を獲得`);
+            });
+            
+            // 端数チップの処理
+            if (remainder > 0) {
+                const sortedWinners = winners.sort((a, b) => a.id - b.id); // ディーラーボタンに近い人から
+                for (let i = 0; i < remainder; i++) {
+                    sortedWinners[i].stack += 1;
+                }
+            }
+        });
+    
+        showAlert(winningsText.join(', '));
+        state.pots = [];
+        state.showdownWinners = null; // 次のハンドのためにリセット
     }
     
     function renderCard(card, isBack = false) { if (!card) return ''; return isBack ? `<div class="card card-back"></div>` : `<div class="card ${SUIT_COLORS[card.suit]}"><span>${card.rank}</span><span>${PokerUtils.SUITS[card.suit]}</span></div>`; }
     
     function startHand() {
-        Object.assign(state, { streetIndex: 0, pots: [], communityCards: [], showdownWinners: null, isAnimating: false });
-        dom.communityCardsArea.innerHTML = '';
-        state.players.forEach(p => { if (p.stack <= 0 && !p.isEliminated) { p.isEliminated = true; showAlert(`${p.name}が脱落`); } if (!p.isEliminated) { Object.assign(p, { betInStreet: 0, totalBetInHand: 0, isFolded: false, hasActedThisStreet: false, isAllIn: false, hand: [], handDetails: null }); } });
-        const activePlayers = state.players.filter(p => !p.isEliminated);
-        if (activePlayers.length < 2) { showAlert("ゲーム終了！"); return; }
-        
-        state.dealerIndex = findNextPlayerIndex(state.dealerIndex, true);
-        if (activePlayers.length === 2) { state.sbIndex = state.dealerIndex; state.bbIndex = findNextPlayerIndex(state.sbIndex); } 
-        else { state.sbIndex = findNextPlayerIndex(state.dealerIndex); state.bbIndex = findNextPlayerIndex(state.sbIndex); }
-        
-        state.deck = []; 
-        for (const suit of Object.keys(PokerUtils.SUITS)) {
-            for (const rank of PokerUtils.RANKS) {
-                state.deck.push({ rank, suit, value: PokerUtils.RANK_VALUES[rank] });
-            }
+    // ... (関数前半の初期化は変更なし) ...
+    Object.assign(state, { streetIndex: 0, pots: [], communityCards: [], showdownWinners: null, isAnimating: false, actionHistory: [] });
+    state.players.forEach(p => { if (p.stack <= 0 && !p.isEliminated) { p.isEliminated = true; showAlert(`${p.name}が脱落`); } if (!p.isEliminated) { Object.assign(p, { betInStreet: 0, totalBetInHand: 0, isFolded: false, hasActedThisStreet: false, isAllIn: false, hand: [], handDetails: null }); } });
+    const activePlayers = state.players.filter(p => !p.isEliminated);
+    if (activePlayers.length < 2) { showAlert("ゲーム終了！"); return; }
+    
+    state.dealerIndex = findNextPlayerIndex(state.dealerIndex, true);
+    state.sbIndex = findNextPlayerIndex(state.dealerIndex);
+    state.bbIndex = findNextPlayerIndex(state.sbIndex);
+    
+    state.deck = []; 
+    for (const suit of Object.keys(PokerUtils.SUITS)) {
+        for (const rank of PokerUtils.RANKS) {
+            state.deck.push({ rank, suit, value: PokerUtils.RANK_VALUES[rank] });
         }
-        for (let i = state.deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [state.deck[i], state.deck[j]] = [state.deck[j], state.deck[i]]; }
-        activePlayers.forEach(p => p.hand = [state.deck.pop(), state.deck.pop()]);
-        state.deck.pop(); state.communityCards = state.deck.splice(0, 3); state.deck.pop(); state.communityCards.push(state.deck.shift()); state.deck.pop(); state.communityCards.push(state.deck.shift());
+    }
+    for (let i = state.deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [state.deck[i], state.deck[j]] = [state.deck[j], state.deck[i]]; }
+    activePlayers.forEach(p => p.hand = [state.deck.pop(), state.deck.pop()]);
+    state.deck.pop(); state.communityCards = state.deck.splice(0, 3); state.deck.pop(); state.communityCards.push(state.deck.shift()); state.deck.pop(); state.communityCards.push(state.deck.shift());
 
-        handleBet(state.sbIndex, state.config.sb); handleBet(state.bbIndex, state.config.bb);
-        state.streetHighestBet = state.config.bb; state.lastRaiseSize = state.config.bb;
-        state.activePlayerIndex = findNextPlayerIndex(state.bbIndex);
+    // ★★★ ブラインドベットの処理を修正 ★★★
+    // betInStreet と totalBetInHand を直接更新し、履歴は後でhandleAction経由で記録
+    const sbPlayer = state.players[state.sbIndex];
+    const bbPlayer = state.players[state.bbIndex];
+
+    const sbAmount = Math.min(sbPlayer.stack, state.config.sb);
+    sbPlayer.stack -= sbAmount;
+    sbPlayer.betInStreet += sbAmount;
+    
+    const bbAmount = Math.min(bbPlayer.stack, state.config.bb);
+    bbPlayer.stack -= bbAmount;
+    bbPlayer.betInStreet += bbAmount;
+    
+    // ブラインドのアクションを履歴に記録
+    state.actionHistory.push({ street: 'preflop', player: `player${sbPlayer.id}`, type: 'bets', amount: sbAmount });
+    state.actionHistory.push({ street: 'preflop', player: `player${bbPlayer.id}`, type: 'bets', amount: bbAmount });
+    
+    if (sbPlayer.stack === 0) sbPlayer.isAllIn = true;
+    if (bbPlayer.stack === 0) bbPlayer.isAllIn = true;
+    // ★★★ 修正ここまで ★★★
+
+    state.streetHighestBet = state.config.bb; 
+    state.lastRaiseSize = state.config.bb;
+    state.activePlayerIndex = findNextPlayerIndex(state.bbIndex);
+
+    // AIターンチェック (変更なし)
+    const firstPlayer = state.players[state.activePlayerIndex];
+    if (firstPlayer && firstPlayer.isAI) {
+        state.isAnimating = true;
+        updateUI();
+        setTimeout(() => makeAiDecision(state.activePlayerIndex), ACTION_DELAY);
+    } else {
         updateUI();
     }
+}
 
-    function handleAction(playerId, action, amount = 0) {
-        if (playerId !== state.activePlayerIndex || state.isAnimating) return; 
-        const player = state.players[playerId]; player.hasActedThisStreet = true;
-        if (action === 'fold') player.isFolded = true;
-        else if (action === 'call') handleBet(playerId, state.streetHighestBet - player.betInStreet);
-        else if (action === 'all-in') handleBet(playerId, player.stack, true);
-        else if (action === 'raise') {
-            const totalBet = amount + player.betInStreet;
-            if (totalBet >= state.streetHighestBet + Math.max(state.lastRaiseSize, state.config.bb)) {
-                state.lastRaiseSize = totalBet - state.streetHighestBet; state.streetHighestBet = totalBet;
-                state.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActedThisStreet = false; }); player.hasActedThisStreet = true;
-            } else { showAlert("レイズ額が小さすぎます"); player.hasActedThisStreet = false; return; }
+function handleAction(playerId, action, amount = 0) {
+    if (playerId !== state.activePlayerIndex || state.isAnimating) return;
+    const player = state.players[playerId];
+
+    // ★★★ アクション履歴の記録を一元化 ★★★
+    const streetName = ['preflop', 'flop', 'turn', 'river'][state.streetIndex];
+    const gtcPlayerId = player.id === 0 ? 'hero' : `player${player.id}`;
+    let actionData = { street: streetName, player: gtcPlayerId };
+
+    player.hasActedThisStreet = true;
+
+    if (action === 'fold') {
+        player.isFolded = true;
+        actionData.type = 'folds';
+        state.actionHistory.push(actionData);
+    } else if (action === 'check') {
+        actionData.type = 'checks';
+        state.actionHistory.push(actionData);
+    } else if (action === 'call') {
+        const callAmount = state.streetHighestBet - player.betInStreet;
+        handleBet(playerId, callAmount);
+        actionData.type = 'calls';
+        actionData.amount = state.streetHighestBet;
+        state.actionHistory.push(actionData);
+    } else if (action === 'all-in') {
+        const raiseAmount = player.stack;
+        handleBet(playerId, raiseAmount, true);
+        actionData.type = 'raises';
+        actionData.amount = player.betInStreet;
+        state.actionHistory.push(actionData);
+    } else if (action === 'raise') {
+        const totalBet = amount + player.betInStreet;
+        if (totalBet >= state.streetHighestBet + Math.max(state.lastRaiseSize, state.config.bb)) {
+            state.lastRaiseSize = totalBet - state.streetHighestBet;
+            state.streetHighestBet = totalBet;
+            state.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActedThisStreet = false; });
+            player.hasActedThisStreet = true;
             handleBet(playerId, amount);
-        } 
-        
-        state.isAnimating = true; updateUI();
-        setTimeout(checkHandContinuation, ACTION_DELAY);
+            actionData.type = 'raises';
+            actionData.amount = totalBet;
+            state.actionHistory.push(actionData);
+        } else {
+            showAlert("レイズ額が小さすぎます");
+            player.hasActedThisStreet = false;
+            return;
+        }
     }
 
-    function handleBet(playerId, amount, isAllIn = false) {
-        const player = state.players.find(p => p.id === playerId); if (!player) return;
-        const betAmount = isAllIn ? player.stack : Math.min(amount, player.stack);
-        player.stack -= betAmount; player.betInStreet += betAmount;
-        if (player.stack === 0) {
-            player.isAllIn = true;
-            if (player.betInStreet > state.streetHighestBet) {
-                state.lastRaiseSize = player.betInStreet - state.streetHighestBet; state.streetHighestBet = player.betInStreet;
-                state.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActedThisStreet = false; }); player.hasActedThisStreet = true;
+    state.isAnimating = true;
+    updateUI();
+    setTimeout(checkHandContinuation, ACTION_DELAY);
+}
+
+function handleBet(playerId, amount, isAllIn = false) {
+    const player = state.players.find(p => p.id === playerId);
+    if (!player) return;
+    const betAmount = isAllIn ? player.stack : Math.min(amount, player.stack);
+    
+    player.stack -= betAmount;
+    player.betInStreet += betAmount;
+    
+    if (player.stack === 0) {
+        player.isAllIn = true;
+    }
+    // ★ 修正点: totalBetInHandとアクション履歴の記録を削除
+}
+    function checkHandContinuation() {
+            state.isAnimating = false;
+            const activePlayers = state.players.filter(p => !p.isEliminated && !p.isFolded);
+            
+            if (activePlayers.length <= 1) {
+                showdown();
+                return;
+            }
+    
+            const actingPlayers = activePlayers.filter(p => !p.isAllIn);
+            const allActed = actingPlayers.every(p => p.hasActedThisStreet);
+            const betsEqual = actingPlayers.every(p => p.betInStreet === state.streetHighestBet);
+    
+            if (actingPlayers.length === 0 || (allActed && betsEqual)) {
+                advanceStreet();
+            } else {
+                state.activePlayerIndex = findNextPlayerIndex(state.activePlayerIndex);
+                const nextPlayer = state.players[state.activePlayerIndex];
+                if (nextPlayer && nextPlayer.isAI) {
+                    state.isAnimating = true;
+                    updateUI();
+                    setTimeout(() => makeAiDecision(state.activePlayerIndex), ACTION_DELAY);
+                } else {
+                    updateUI();
+                }
             }
         }
-    }
-
-    function checkHandContinuation() {
-        state.isAnimating = false;
-        const activePlayers = state.players.filter(p => !p.isEliminated && !p.isFolded);
-        if (activePlayers.length <= 1) {
-            collectBets(); const winner = activePlayers[0];
-            const totalPot = state.pots.reduce((sum, pot) => sum + pot.amount, 0);
-            if(winner) winner.stack += totalPot; showAlert(`${winner ? winner.name : ''}がポット(${totalPot})を獲得しました`);
-            state.streetIndex = 4; updateUI(); return;
-        }
-        const actingPlayers = activePlayers.filter(p => !p.isAllIn);
-        const allActed = actingPlayers.every(p => p.hasActedThisStreet); const betsEqual = actingPlayers.every(p => p.betInStreet === state.streetHighestBet);
-        if (actingPlayers.length === 0 || (allActed && betsEqual)) {
-            advanceStreet();
-        } else {
-            state.activePlayerIndex = findNextPlayerIndex(state.activePlayerIndex); updateUI();
-        }
-    }
-
     function collectBets() {
-        state.players.forEach(p => { p.totalBetInHand += p.betInStreet; p.betInStreet = 0; });
+        // ハンド終了時にのみ呼び出され、サイドポットを正確に計算する
+        state.pots = [];
         const contributors = state.players.filter(p => p.totalBetInHand > 0);
-        if (contributors.length === 0) { state.pots = []; return; }
-        const betLevels = [...new Set(contributors.map(p => p.totalBetInHand))].sort((a, b) => a - b);
-        let newPots = []; let lastLevel = 0;
-        betLevels.forEach(level => {
-            let potAmountForLevel = 0;
-            const eligiblePlayers = contributors.filter(p => p.totalBetInHand >= level).map(p => p.id);
-            if (eligiblePlayers.length > 0) {
-                contributors.forEach(p => { potAmountForLevel += Math.max(0, Math.min(p.totalBetInHand, level) - lastLevel); });
-                if(potAmountForLevel > 0) {
-                    const showdownPlayers = eligiblePlayers.filter(id => !state.players[id].isFolded || state.players[id].isAllIn);
-                    if(showdownPlayers.length > 0) newPots.push({ amount: potAmountForLevel, eligiblePlayerIds: showdownPlayers });
+        if (contributors.length === 0) return;
+
+        // 不成立ベットの返金処理
+        const betAmounts = [...new Set(contributors.map(p => p.totalBetInHand))].sort((a, b) => b - a);
+        if (betAmounts.length > 1) {
+            const highestBet = betAmounts[0];
+            const secondHighestBet = betAmounts[1];
+            const overBettor = contributors.find(p => p.totalBetInHand === highestBet);
+            // オールインではないプレイヤーのコールされなかったベット額のみ返金
+            if (overBettor && !overBettor.isAllIn) {
+                const refund = highestBet - secondHighestBet;
+                if (refund > 0) {
+                    overBettor.stack += refund;
+                    overBettor.totalBetInHand -= refund;
+                    showAlert(`${overBettor.name}に不成立ベット${refund}を返却`);
                 }
+            }
+        }
+
+        const betLevels = [...new Set(contributors.map(p => p.totalBetInHand))].sort((a, b) => a - b);
+        let lastLevel = 0;
+        betLevels.forEach(level => {
+            if (level <= lastLevel) return;
+            const pot = {
+                amount: 0,
+                eligiblePlayerIds: contributors
+                    .filter(p => p.totalBetInHand >= level)
+                    .map(p => p.id)
+            };
+
+            contributors.forEach(p => {
+                if (p.totalBetInHand >= lastLevel) {
+                   pot.amount += Math.min(p.totalBetInHand, level) - lastLevel;
+                }
+            });
+
+            if (pot.amount > 0) {
+                state.pots.push(pot);
             }
             lastLevel = level;
         });
-        state.pots = newPots;
     }
     
-    function advanceStreet() {
-        collectBets();
-        state.streetIndex++; Object.assign(state, { streetHighestBet: 0, lastRaiseSize: state.config.bb });
-        state.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActedThisStreet = false; });
-        if (state.streetIndex > 3) { showdown(); return; }
-        state.activePlayerIndex = findNextPlayerIndex(state.dealerIndex);
-        revealCommunityCardsWithAnimation();
+function advanceStreet() {
+    state.players.forEach(p => { p.totalBetInHand += p.betInStreet; p.betInStreet = 0; });
+
+    state.streetIndex++;
+    Object.assign(state, { streetHighestBet: 0, lastRaiseSize: state.config.bb });
+    state.players.forEach(p => { if (!p.isFolded && !p.isAllIn) p.hasActedThisStreet = false; });
+    
+    if (state.streetIndex > 3) { 
+        showdown(); 
+        return; 
     }
     
-    function showdown() {
-        const showdownPlayers = state.players.filter(p => !p.isFolded);
-        showdownPlayers.forEach(p => { p.handDetails = PokerUtils.evaluateHand(p.hand, state.communityCards); });
-        showdownPlayers.sort((a,b) => PokerUtils.compareHands(b.handDetails, a.handDetails));
-        const bestHand = showdownPlayers[0].handDetails;
-        const winners = showdownPlayers.filter(p => PokerUtils.compareHands(p.handDetails, bestHand) === 0);
-        const totalPot = state.pots.reduce((sum, pot) => sum + pot.amount, 0);
-        state.showdownWinners = { winners, amount: totalPot };
+    state.activePlayerIndex = findNextPlayerIndex(state.dealerIndex);
+
+    const actingPlayers = state.players.filter(p => !p.isEliminated && !p.isFolded && !p.isAllIn);
+    const nextPlayer = state.players[state.activePlayerIndex];
+    if (nextPlayer && nextPlayer.isAI && actingPlayers.length > 1) {
+        revealCommunityCardsWithAnimation(true); // AIのアクションまで待機するフラグ
+    } else {
+        revealCommunityCardsWithAnimation(false);
+    }
+}
+
+function showdown() {
+    // 全員フォールドの場合を除き、最後のストリートのベットをtotalBetInHandに加算
+    if (state.players.filter(p => !p.isFolded).length > 1) {
+        state.players.forEach(p => { p.totalBetInHand += p.betInStreet; p.betInStreet = 0; });
+    }
+    collectBets(); // ポット計算をここに集約
+    
+    const showdownPlayers = state.players.filter(p => !p.isFolded);
+    if (showdownPlayers.length <= 1) {
+        const winner = showdownPlayers[0] || state.players.find(p => !p.isFolded);
+        if(winner) {
+            const totalPot = state.pots.reduce((sum, pot) => sum + pot.amount, 0);
+            if (totalPot > 0) {
+                winner.stack += totalPot;
+                showAlert(`${winner.name}がポット(${totalPot})を獲得しました`);
+                state.pots = [];
+            }
+        }
+        state.streetIndex = 4;
         updateUI();
+        showNextHandButton();
+        return;
     }
+
+    showdownPlayers.forEach(p => { p.handDetails = PokerUtils.evaluateHand(p.hand, state.communityCards); });
+    state.showdownWinners = { players: showdownPlayers };
+    updateUI();
+}
 
     function findNextPlayerIndex(startIndex, isDealerSearch = false) {
         let currentIndex = startIndex, count = 0;
@@ -1782,6 +1873,114 @@ const TexasHoldemGame = (() => {
     }
     
     function showAlert(msg) { if(!dom.alertElement) return; dom.alertElement.textContent = msg; dom.alertElement.classList.add('show'); setTimeout(() => dom.alertElement.classList.remove('show'), 3000); }
+
+    // ▼▼▼ AI関連の関数を追加 ▼▼▼
+    function findPositionForPlayer(playerId) {
+        const activePlayers = state.players.filter(p => !p.isEliminated);
+        const numActive = activePlayers.length;
+
+        if (numActive < 2) return 'BTN'; // Should not happen
+
+        const dealerIndexInActive = activePlayers.findIndex(p => p.id === state.dealerIndex);
+        const playerIndexInActive = activePlayers.findIndex(p => p.id === playerId);
+
+        // 0 = BTN, 1 = SB, 2 = BB, etc.
+        const relativePosition = (playerIndexInActive - dealerIndexInActive + numActive) % numActive;
+
+        const positionMaps = {
+            6: ['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO'],
+            5: ['BTN', 'SB', 'BB', 'HJ', 'CO'],
+            4: ['BTN', 'SB', 'BB', 'CO'],
+            3: ['BTN', 'SB', 'BB'],
+            2: ['BTN', 'BB'] 
+        };
+
+        const positionMap = positionMaps[numActive] || positionMaps[6]; // Default to 6-max map
+        return positionMap[relativePosition] || 'BTN';
+    }
+
+async function makeAiDecision(playerId) {
+    const player = state.players.find(p => p.id === playerId);
+    if (!player || player.isFolded || player.isEliminated) return;
+
+    // プリフロップのロジック
+    if (state.streetIndex === 0) {
+        // ★ 修正点: ハンドの文字列変換を正確に (例: KAsではなくAKs)
+        const handRanks = player.hand.map(c => c.rank).sort((a, b) => PokerUtils.RANK_VALUES[b] - PokerUtils.RANK_VALUES[a]);
+        const isSuited = player.hand[0].suit === player.hand[1].suit;
+        const handNotation = handRanks[0] === handRanks[1] ? `${handRanks[0]}${handRanks[1]}` : (isSuited ? `${handRanks[0]}${handRanks[1]}s` : `${handRanks[0]}${handRanks[1]}o`);
+        
+        const position = findPositionForPlayer(playerId);
+        const stackInBB = player.stack / state.config.bb;
+        const stackCategory = stackInBB > 40 ? '100bb' : '20bb';
+        const pRange = rangeData[stackCategory]['6max'][position];
+        const callAmount = state.streetHighestBet - player.betInStreet;
+
+        if (pRange && pRange.RAISE && pRange.RAISE.includes(handNotation)) {
+            const raiseAmount = state.streetHighestBet > state.config.bb ? state.streetHighestBet * 3 : state.config.bb * 3;
+            handleAction(playerId, 'raise', raiseAmount - player.betInStreet);
+        } else if (callAmount > 0 && pRange && pRange.CALL && pRange.CALL.includes(handNotation)) {
+            handleAction(playerId, 'call');
+        } else if (callAmount === 0) {
+            handleAction(playerId, 'check');
+        } else {
+            handleAction(playerId, 'fold');
+        }
+        return;
+    }
+
+    // フロップ以降の gameContext 生成ロジック
+    const boardCardsStr = state.communityCards.slice(0, 3 + (state.streetIndex - 1)).map(c => `${c.rank}${c.suit}`);
+
+    // ★★★ 分析エンジンが正しく解釈できるよう、context全体を再構築 ★★★
+    const gameContext = {
+        players: state.players.map(p => ({
+            id: p.id === playerId ? 'hero' : (p.id === 0 ? 'player0' : `player${p.id}`), // AI自身を'hero', 人間を'player0'に
+            stack: p.stack,
+            isFolded: p.isFolded,
+            position: findPositionForPlayer(p.id)
+        })),
+        board: boardCardsStr,
+        potSize: state.players.reduce((sum, p) => sum + p.totalBetInHand, 0) + state.players.reduce((sum, p) => sum + p.betInStreet, 0),
+        gameType: 'cash',
+        sb: state.config.sb,
+        bb: state.config.bb,
+        // アクション履歴のIDもAIの視点に合わせて変換する
+        actions: state.actionHistory.map(action => {
+            let newPlayerId = action.player;
+            if (action.player === `player${playerId}`) { // AI自身のアクションは'hero'
+                newPlayerId = 'hero';
+            } else if (action.player === 'hero') { // 人間プレイヤーのアクションは'player0'
+                newPlayerId = 'player0';
+            }
+            return { ...action, player: newPlayerId };
+        })
+    };
+    
+    // AI自身のハンド情報を'hero'に設定
+    const heroPlayerForContext = gameContext.players.find(p => p.id === 'hero');
+    heroPlayerForContext.hand = player.hand.map(c => `${c.rank}${c.suit}`);
+
+    const analysisData = GtcAnalysis.calculateAllEVs(gameContext, 0);
+    const results = analysisData.results;
+
+    if (!results || Object.keys(results).length === 0) {
+        handleAction(playerId, state.streetHighestBet - player.betInStreet > 0 ? 'fold' : 'check');
+        return;
+    }
+
+    const bestActionKey = Object.keys(results).reduce((a, b) => results[a].ev > results[b].ev ? a : b);
+    const bestAction = results[bestActionKey];
+    const [actionType] = bestActionKey.split('_');
+
+    if (actionType === 'raise' || actionType === 'bet') {
+        const raiseAmount = bestAction.amount - player.betInStreet;
+        handleAction(playerId, 'raise', Math.max(0, raiseAmount));
+    } else {
+        handleAction(playerId, actionType, bestAction.amount);
+    }
+}
+    // ▲▲▲ AI関連の関数ここまで ▲▲▲
 
     return { init };
 })();
